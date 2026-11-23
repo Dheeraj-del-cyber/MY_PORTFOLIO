@@ -2,13 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import DynamicIsland from "@/components/DynamicIsland";
-
-interface LetterTransform {
-  x: number;
-  y: number;
-  scale: number;
-  rotate: number;
-}
+import InteractiveGrass from "@/components/InteractiveGrass";
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
@@ -92,7 +86,7 @@ export default function Home() {
       currentPos.current.x += (targetPos.current.x - currentPos.current.x) * lerpFactor;
       currentPos.current.y += (targetPos.current.y - currentPos.current.y) * lerpFactor;
 
-      // 2. Calculate velocity for organic droplet stretch
+      // 2. Velocity for organic droplet stretch
       const vx = currentPos.current.x - prevPos.current.x;
       const vy = currentPos.current.y - prevPos.current.y;
       prevPos.current = { x: currentPos.current.x, y: currentPos.current.y };
@@ -108,7 +102,7 @@ export default function Home() {
       }
 
       // 4. Magnetic Lift & Fluid Pull on each letter
-      const magneticRadius = 260; // Influence distance in pixels
+      const magneticRadius = 260;
 
       letterRefs.current.forEach((el, index) => {
         if (!el || !letterBoxes.current[index]) return;
@@ -119,10 +113,8 @@ export default function Home() {
         const dist = Math.hypot(dx, dy);
 
         if (dist < magneticRadius) {
-          // Non-linear cubic magnetic attraction curve
           const power = Math.pow(1 - dist / magneticRadius, 1.6);
           const pullX = dx * power * 0.38;
-          // Upward magnetic levitation force + attraction
           const pullY = dy * power * 0.38 - power * 22;
           const scale = 1 + power * 0.16;
           const rotate = (dx / magneticRadius) * 16 * power;
@@ -131,7 +123,6 @@ export default function Home() {
           el.style.textShadow = `0 ${power * 16}px ${power * 24}px rgba(86, 62, 59, 0.18), 0 0 ${power * 30}px rgba(255, 175, 55, 0.4)`;
           el.style.color = power > 0.45 ? "#ffaf37" : "#563e3b";
         } else {
-          // Smooth return to resting state
           el.style.transform = `translate3d(0, 0, 0) scale(1) rotate(0deg)`;
           el.style.textShadow = `none`;
           el.style.color = "#563e3b";
@@ -184,7 +175,7 @@ export default function Home() {
         <rect width="100%" height="100%" filter="url(#paper-grain)" />
       </svg>
 
-      {/* 2. LIQUID FLUID ORB (Magnetic Viscous Liquid Droplet) */}
+      {/* 2. LIQUID FLUID ORB (Magnetic Viscous Droplet) */}
       <div
         ref={fluidOrbRef}
         aria-hidden="true"
@@ -197,7 +188,7 @@ export default function Home() {
         }}
       />
 
-      {/* Viscous Magnetic Specular Core (follows closely like liquid mercury) */}
+      {/* Viscous Magnetic Specular Core */}
       <div
         aria-hidden="true"
         className="pointer-events-none fixed top-0 left-0 h-40 w-40 rounded-full blur-2xl z-10 opacity-70"
@@ -208,7 +199,7 @@ export default function Home() {
         }}
       />
 
-      {/* 3. FLUID LIQUID RIPPLES (Spawn on click) */}
+      {/* 3. FLUID LIQUID RIPPLES */}
       {ripples.map((r) => (
         <span
           key={r.id}
@@ -228,16 +219,16 @@ export default function Home() {
       <DynamicIsland />
 
       {/* 5. EDITORIAL CORNER ANCHORS */}
-      <div className="fixed top-5 left-5 sm:top-8 sm:left-8 z-20 flex items-center gap-2 text-[10px] sm:text-xs tracking-[0.2em] uppercase text-[#563e3b]/45 font-medium">
+      <div className="fixed top-5 left-5 sm:top-8 sm:left-8 z-30 flex items-center gap-2 text-[10px] sm:text-xs tracking-[0.2em] uppercase text-[#563e3b]/50 font-medium backdrop-blur-xs">
         <span className="h-1.5 w-1.5 rounded-full bg-[#ffaf37]" />
         <span>{time || "LOCAL TIME"}</span>
       </div>
 
-      <div className="fixed top-5 right-5 sm:top-8 sm:right-8 z-20 text-[10px] sm:text-xs tracking-[0.2em] uppercase text-[#563e3b]/45 font-medium">
+      <div className="fixed top-5 right-5 sm:top-8 sm:right-8 z-30 text-[10px] sm:text-xs tracking-[0.2em] uppercase text-[#563e3b]/50 font-medium backdrop-blur-xs">
         <span>ED. 2026 • SOLARE</span>
       </div>
 
-      <div className="fixed bottom-5 left-5 sm:bottom-8 sm:left-8 z-20 flex items-center gap-2 text-[10px] sm:text-xs tracking-[0.2em] uppercase text-[#563e3b]/45 font-medium">
+      <div className="fixed bottom-5 left-5 sm:bottom-8 sm:left-8 z-30 flex items-center gap-2 text-[10px] sm:text-xs tracking-[0.2em] uppercase text-[#563e3b]/70 font-semibold rounded-full bg-[#fffaf0]/70 backdrop-blur-md px-3 py-1 border border-[#563e3b]/10 shadow-xs">
         <span className="relative flex h-1.5 w-1.5">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#ffaf37] opacity-75" />
           <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#ffaf37]" />
@@ -246,7 +237,7 @@ export default function Home() {
         <span className="sm:hidden">AVAILABLE</span>
       </div>
 
-      <div className="fixed bottom-5 right-5 sm:bottom-8 sm:right-8 z-20 text-[10px] sm:text-xs tracking-[0.2em] uppercase text-[#563e3b]/45 font-medium">
+      <div className="fixed bottom-5 right-5 sm:bottom-8 sm:right-8 z-30 text-[10px] sm:text-xs tracking-[0.2em] uppercase text-[#563e3b]/70 font-semibold rounded-full bg-[#fffaf0]/70 backdrop-blur-md px-3 py-1 border border-[#563e3b]/10 shadow-xs">
         <span>DEV & DESIGN</span>
       </div>
 
@@ -266,6 +257,9 @@ export default function Home() {
           ))}
         </h1>
       </div>
+
+      {/* 7. INTERACTIVE PROCEDURAL GRASS (Atmospheric Natural Base) */}
+      <InteractiveGrass />
     </main>
   );
 }
