@@ -6,7 +6,6 @@ import InteractiveGrass from "@/components/InteractiveGrass";
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
-  const [time, setTime] = useState<string>("");
   const [ripples, setRipples] = useState<{ x: number; y: number; id: number }[]>([]);
 
   // Mouse & physics tracking
@@ -61,21 +60,6 @@ export default function Home() {
 
     window.addEventListener("mousemove", handleMouseMove, { passive: true });
     window.addEventListener("touchmove", handleTouchMove, { passive: true });
-
-    // Live clock
-    const updateClock = () => {
-      const now = new Date();
-      setTime(
-        now.toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          hour12: true,
-        })
-      );
-    };
-    updateClock();
-    const clockInterval = setInterval(updateClock, 1000);
 
     // 120fps Animation Loop with Viscous Liquid Physics
     let animationFrameId: number;
@@ -138,7 +122,6 @@ export default function Home() {
       window.removeEventListener("resize", updateLetterBounds);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("touchmove", handleTouchMove);
-      clearInterval(clockInterval);
       cancelAnimationFrame(animationFrameId);
     };
   }, []);
@@ -218,30 +201,7 @@ export default function Home() {
       {/* 4. DYNAMIC ISLAND MENU */}
       <DynamicIsland />
 
-      {/* 5. EDITORIAL CORNER ANCHORS */}
-      <div className="fixed top-5 left-5 sm:top-8 sm:left-8 z-30 flex items-center gap-2 text-[10px] sm:text-xs tracking-[0.2em] uppercase text-[#563e3b]/50 font-medium backdrop-blur-xs">
-        <span className="h-1.5 w-1.5 rounded-full bg-[#ffaf37]" />
-        <span>{time || "LOCAL TIME"}</span>
-      </div>
-
-      <div className="fixed top-5 right-5 sm:top-8 sm:right-8 z-30 text-[10px] sm:text-xs tracking-[0.2em] uppercase text-[#563e3b]/50 font-medium backdrop-blur-xs">
-        <span>ED. 2026 • SOLARE</span>
-      </div>
-
-      <div className="fixed bottom-5 left-5 sm:bottom-8 sm:left-8 z-30 flex items-center gap-2 text-[10px] sm:text-xs tracking-[0.2em] uppercase text-[#563e3b]/70 font-semibold rounded-full bg-[#fffaf0]/70 backdrop-blur-md px-3 py-1 border border-[#563e3b]/10 shadow-xs">
-        <span className="relative flex h-1.5 w-1.5">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#ffaf37] opacity-75" />
-          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#ffaf37]" />
-        </span>
-        <span className="hidden sm:inline">AVAILABLE FOR WORK</span>
-        <span className="sm:hidden">AVAILABLE</span>
-      </div>
-
-      <div className="fixed bottom-5 right-5 sm:bottom-8 sm:right-8 z-30 text-[10px] sm:text-xs tracking-[0.2em] uppercase text-[#563e3b]/70 font-semibold rounded-full bg-[#fffaf0]/70 backdrop-blur-md px-3 py-1 border border-[#563e3b]/10 shadow-xs">
-        <span>DEV & DESIGN</span>
-      </div>
-
-      {/* 6. CENTERPIECE: MAGNETIC LIQUID LETTERFORMS */}
+      {/* 5. CENTERPIECE: MAGNETIC LIQUID LETTERFORMS */}
       <div className="relative z-20 flex flex-col items-center justify-center">
         <h1 className="font-[family-name:var(--font-serif)] text-[clamp(3.8rem,16vw,16rem)] font-normal italic leading-none tracking-[-0.03em] text-[#563e3b] text-center select-none">
           {nameLetters.map((letter, index) => (
