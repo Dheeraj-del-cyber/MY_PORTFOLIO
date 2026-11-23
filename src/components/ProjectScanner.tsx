@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import { FolderGit2, ExternalLink, Play, Pause, RotateCcw, ArrowLeftRight } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { FolderGit2 } from "lucide-react";
 
 interface ProjectItem {
   id: string;
@@ -119,102 +119,33 @@ void main() {
 export default function ProjectScanner() {
   const containerRef = useRef<HTMLDivElement>(null);
   const cardLineRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [speedDisplay, setSpeedDisplay] = useState(120);
 
   // Physics state
   const posRef = useRef(0);
-  const velRef = useRef(120);
-  const dirRef = useRef(-1);
-  const isPlayingRef = useRef(true);
+  const velRef = useRef(80); // Calm constant drift speed
   const isDraggingRef = useRef(false);
   const lastMouseXRef = useRef(0);
   const mouseVelRef = useRef(0);
   const lastTimeRef = useRef(0);
 
-  // Particle state
-  const particlesRef = useRef<
-    {
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      radius: number;
-      alpha: number;
-      decay: number;
-      life: number;
-    }[]
-  >([]);
-
-  // Toggle play/pause
-  const togglePlay = () => {
-    isPlayingRef.current = !isPlayingRef.current;
-    setIsPlaying(isPlayingRef.current);
-  };
-
-  // Reset position
-  const resetPos = () => {
-    if (!containerRef.current) return;
-    posRef.current = containerRef.current.offsetWidth / 2;
-    velRef.current = 120;
-    dirRef.current = -1;
-    isPlayingRef.current = true;
-    setIsPlaying(true);
-    setSpeedDisplay(120);
-  };
-
-  // Change direction
-  const changeDir = () => {
-    dirRef.current *= -1;
-  };
-
-  // Setup loop and event listeners
   useEffect(() => {
     const container = containerRef.current;
     const cardLine = cardLineRef.current;
-    const canvas = canvasRef.current;
-    if (!container || !cardLine || !canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (!container || !cardLine) return;
 
     let animId: number;
     let containerWidth = container.offsetWidth;
     const cardWidth = window.innerWidth < 640 ? 300 : 380;
     const cardGap = window.innerWidth < 640 ? 30 : 50;
-    // Repeat cards 3 times for continuous looping
     const totalCards = PROJECTS_DATA.length * 3;
     const cardLineWidth = (cardWidth + cardGap) * totalCards;
 
-    // Setup canvas size
-    const resizeCanvas = () => {
+    const onResize = () => {
       containerWidth = container.offsetWidth;
-      canvas.width = containerWidth;
-      canvas.height = 340;
     };
-    resizeCanvas();
-    window.addEventListener("resize", resizeCanvas);
+    window.addEventListener("resize", onResize);
 
-    // Particle cache
-    const gradCanvas = document.createElement("canvas");
-    gradCanvas.width = 16;
-    gradCanvas.height = 16;
-    const gCtx = gradCanvas.getContext("2d");
-    if (gCtx) {
-      const grad = gCtx.createRadialGradient(8, 8, 0, 8, 8, 8);
-      grad.addColorStop(0, "rgba(255, 255, 255, 1)");
-      grad.addColorStop(0.35, "rgba(255, 175, 55, 0.85)");
-      grad.addColorStop(0.75, "rgba(229, 154, 47, 0.4)");
-      grad.addColorStop(1, "transparent");
-      gCtx.fillStyle = grad;
-      gCtx.beginPath();
-      gCtx.arc(8, 8, 8, 0, Math.PI * 2);
-      gCtx.fill();
-    }
-
-    // Drag handlers
+    // Mouse & Touch drag handlers
     const onMouseDown = (e: MouseEvent | Touch) => {
       isDraggingRef.current = true;
       lastMouseXRef.current = e.clientX;
@@ -232,19 +163,17 @@ export default function ProjectScanner() {
     const onMouseUp = () => {
       if (!isDraggingRef.current) return;
       isDraggingRef.current = false;
-      if (Math.abs(mouseVelRef.current) > 30) {
-        velRef.current = Math.min(Math.abs(mouseVelRef.current), 600);
-        dirRef.current = mouseVelRef.current > 0 ? 1 : -1;
+      if (Math.abs(mouseVelRef.current) > 20) {
+        velRef.current = Math.min(Math.abs(mouseVelRef.current), 350);
       } else {
-        velRef.current = 120;
+        velRef.current = 80;
       }
-      setSpeedDisplay(Math.round(velRef.current));
     };
 
     // Wheel scrolling
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const delta = e.deltaY > 0 ? -35 : 35;
+      const delta = e.deltaY > 0 ? -30 : 30;
       posRef.current += delta;
     };
 
@@ -270,25 +199,19 @@ export default function ProjectScanner() {
     window.addEventListener("touchend", onMouseUp);
     containerEl.addEventListener("wheel", onWheel, { passive: false });
 
-    // Main animation loop
-    const scannerX = containerWidth / 2;
-    const scannerWidth = 4;
-    const scannerLeft = scannerX - scannerWidth / 2;
-    const scannerRight = scannerX + scannerWidth / 2;
-
+    // Main animation loop: exactly synchronized with the scanner line
     const animateLoop = (time: number) => {
       const dt = lastTimeRef.current ? (time - lastTimeRef.current) / 1000 : 0.016;
       lastTimeRef.current = time;
 
-      // Physics update
-      if (isPlayingRef.current && !isDraggingRef.current) {
-        if (velRef.current > 30) {
+      // Calm deceleration toward base speed
+      if (!isDraggingRef.current) {
+        if (velRef.current > 80) {
           velRef.current *= 0.985;
         } else {
-          velRef.current = 120;
+          velRef.current = 80;
         }
-        posRef.current += velRef.current * dirRef.current * dt;
-        setSpeedDisplay(Math.round(velRef.current));
+        posRef.current -= velRef.current * dt;
       }
 
       // Loop wrap-around
@@ -298,106 +221,35 @@ export default function ProjectScanner() {
         posRef.current = -cardLineWidth;
       }
 
-      // Apply transform to card line
+      // 1. Move card line immediately
       cardLine.style.transform = `translate3d(${posRef.current}px, 0, 0)`;
 
-      // Update clipping on each card wrapper
-      let anyScanning = false;
+      // 2. Compute exact instantaneous clip-path for every card
+      const scannerX = containerWidth / 2;
       const wrappers = cardLine.querySelectorAll<HTMLDivElement>(".scanner-card-wrapper");
 
       wrappers.forEach((wrapper) => {
         const rect = wrapper.getBoundingClientRect();
         const containerRect = container.getBoundingClientRect();
+
+        // Exact position of the card's left and right edge relative to the container
         const cardLeft = rect.left - containerRect.left;
-        const cardRight = cardLeft + rect.width;
-        const width = rect.width;
+        const currentCardWidth = rect.width;
 
         const normalCard = wrapper.querySelector<HTMLDivElement>(".card-normal-layer");
         const asciiCard = wrapper.querySelector<HTMLDivElement>(".card-ascii-layer");
         if (!normalCard || !asciiCard) return;
 
-        if (cardLeft < scannerRight && cardRight > scannerLeft) {
-          anyScanning = true;
-          const intersectLeft = Math.max(scannerLeft - cardLeft, 0);
-          const intersectRight = Math.min(scannerRight - cardLeft, width);
+        // Where is the scanner relative to the card's width?
+        const offsetFromLeft = scannerX - cardLeft;
+        const splitPercent = Math.max(0, Math.min(100, (offsetFromLeft / currentCardWidth) * 100));
 
-          const clipRight = (intersectLeft / width) * 100;
-          const clipLeft = (intersectRight / width) * 100;
-
-          normalCard.style.setProperty("--clip-right", `${clipRight}%`);
-          asciiCard.style.setProperty("--clip-left", `${clipLeft}%`);
-        } else {
-          if (cardRight < scannerLeft) {
-            normalCard.style.setProperty("--clip-right", "100%");
-            asciiCard.style.setProperty("--clip-left", "100%");
-          } else if (cardLeft > scannerRight) {
-            normalCard.style.setProperty("--clip-right", "0%");
-            asciiCard.style.setProperty("--clip-left", "0%");
-          }
-        }
+        // Exact zero-delay mathematical split directly at the laser line:
+        // Left of laser = Scanned Code (0% to splitPercent%)
+        // Right of laser = Normal Card (splitPercent% to 100%)
+        normalCard.style.clipPath = `inset(0 0 0 ${splitPercent}%)`;
+        asciiCard.style.clipPath = `inset(0 ${100 - splitPercent}% 0 0)`;
       });
-
-      // Canvas Laser & Particle sparks
-      ctx.clearRect(0, 0, containerWidth, 340);
-
-      // Draw Center Laser Line
-      const laserH = 320;
-      const laserY = 10;
-      const laserGrad = ctx.createLinearGradient(0, laserY, 0, laserY + laserH);
-      laserGrad.addColorStop(0, "rgba(255, 175, 55, 0)");
-      laserGrad.addColorStop(0.2, "rgba(255, 175, 55, 0.9)");
-      laserGrad.addColorStop(0.5, "rgba(255, 255, 255, 1)");
-      laserGrad.addColorStop(0.8, "rgba(255, 175, 55, 0.9)");
-      laserGrad.addColorStop(1, "rgba(255, 175, 55, 0)");
-
-      ctx.save();
-      ctx.shadowColor = "#ffaf37";
-      ctx.shadowBlur = anyScanning ? 24 : 12;
-      ctx.fillStyle = laserGrad;
-      ctx.fillRect(scannerX - (anyScanning ? 2 : 1), laserY, anyScanning ? 4 : 2, laserH);
-      ctx.restore();
-
-      // Emit particles from laser
-      const emitRate = anyScanning ? 6 : 2;
-      for (let i = 0; i < emitRate; i++) {
-        if (particlesRef.current.length < 300) {
-          particlesRef.current.push({
-            x: scannerX + (Math.random() - 0.5) * 4,
-            y: laserY + Math.random() * laserH,
-            vx: (Math.random() - 0.5) * (anyScanning ? 2.5 : 1.2),
-            vy: (Math.random() - 0.5) * 1.5,
-            radius: Math.random() * 2.5 + 0.8,
-            alpha: Math.random() * 0.7 + 0.3,
-            decay: Math.random() * 0.02 + 0.015,
-            life: 1.0,
-          });
-        }
-      }
-
-      // Update & draw particles
-      ctx.globalCompositeOperation = "lighter";
-      for (let i = particlesRef.current.length - 1; i >= 0; i--) {
-        const p = particlesRef.current[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life -= p.decay;
-
-        if (p.life <= 0) {
-          particlesRef.current.splice(i, 1);
-          continue;
-        }
-
-        ctx.globalAlpha = p.alpha * p.life;
-        ctx.drawImage(
-          gradCanvas,
-          p.x - p.radius,
-          p.y - p.radius,
-          p.radius * 2,
-          p.radius * 2
-        );
-      }
-      ctx.globalCompositeOperation = "source-over";
-      ctx.globalAlpha = 1;
 
       animId = requestAnimationFrame(animateLoop);
     };
@@ -406,7 +258,7 @@ export default function ProjectScanner() {
 
     return () => {
       cancelAnimationFrame(animId);
-      window.removeEventListener("resize", resizeCanvas);
+      window.removeEventListener("resize", onResize);
       containerEl.removeEventListener("mousedown", onMouseDown);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
@@ -418,53 +270,24 @@ export default function ProjectScanner() {
   const displayList = [...PROJECTS_DATA, ...PROJECTS_DATA, ...PROJECTS_DATA];
 
   return (
-    <div className="relative w-full flex flex-col items-center py-4 select-none">
-      {/* 1. TOP CONTROLS BAR */}
-      <div className="flex flex-wrap items-center justify-between gap-3 w-full px-4 mb-6 z-20">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={togglePlay}
-            className="flex items-center gap-1.5 rounded-full border border-[#fffaf0]/20 bg-[#fffaf0]/10 px-3.5 py-1.5 text-xs font-semibold text-[#fffaf0] transition hover:bg-[#ffaf37] hover:text-[#563e3b] active:scale-95 cursor-pointer"
-          >
-            {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-            <span>{isPlaying ? "Pause" : "Play"}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={resetPos}
-            className="flex items-center gap-1.5 rounded-full border border-[#fffaf0]/20 bg-[#fffaf0]/10 px-3.5 py-1.5 text-xs font-semibold text-[#fffaf0] transition hover:bg-[#ffaf37] hover:text-[#563e3b] active:scale-95 cursor-pointer"
-          >
-            <RotateCcw className="h-3 w-3" />
-            <span>Reset</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={changeDir}
-            className="flex items-center gap-1.5 rounded-full border border-[#fffaf0]/20 bg-[#fffaf0]/10 px-3.5 py-1.5 text-xs font-semibold text-[#fffaf0] transition hover:bg-[#ffaf37] hover:text-[#563e3b] active:scale-95 cursor-pointer"
-          >
-            <ArrowLeftRight className="h-3 w-3" />
-            <span>Direction</span>
-          </button>
-        </div>
-
-        <div className="text-[11px] font-mono tracking-wider text-[#ffaf37] border border-[#ffaf37]/30 bg-[#ffaf37]/10 px-3 py-1 rounded-full">
-          Velocity: <span className="font-bold">{speedDisplay}</span> px/s
-        </div>
-      </div>
-
-      {/* 2. SCANNER STREAM CONTAINER */}
+    <div className="relative w-full flex flex-col items-center py-2 select-none">
+      {/* SCANNER STREAM CONTAINER */}
       <div
         ref={containerRef}
-        className="relative w-full h-[320px] flex items-center overflow-hidden cursor-grab active:cursor-grabbing border-y border-[#fffaf0]/10"
+        className="relative w-full h-[300px] sm:h-[320px] flex items-center overflow-hidden cursor-grab active:cursor-grabbing border-y border-[#fffaf0]/15"
       >
-        {/* Background Laser & Particle Canvas */}
-        <canvas
-          ref={canvasRef}
-          className="pointer-events-none absolute inset-0 h-full w-full z-15"
-        />
+        {/* CALM, ELEGANT VERTICAL LASER LINE (Centered at exactly 50%) */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-0 bottom-0 -translate-x-1/2 z-25 flex items-center justify-center"
+        >
+          {/* Outer soft ambient glow */}
+          <div className="absolute h-[92%] w-8 rounded-full bg-[#ffaf37]/15 blur-md" />
+          {/* Inner golden beam */}
+          <div className="absolute h-[88%] w-[2px] bg-gradient-to-b from-transparent via-[#ffaf37] to-transparent shadow-[0_0_12px_#ffaf37]" />
+          {/* White-hot center hairline */}
+          <div className="absolute h-[75%] w-[1px] bg-gradient-to-b from-transparent via-white to-transparent" />
+        </div>
 
         {/* Moving Card Line */}
         <div
@@ -474,27 +297,24 @@ export default function ProjectScanner() {
           {displayList.map((item, idx) => (
             <div
               key={`${item.id}-${idx}`}
-              className="scanner-card-wrapper relative w-[290px] sm:w-[380px] h-[230px] shrink-0 rounded-2xl overflow-hidden shadow-2xl"
+              className="scanner-card-wrapper relative w-[290px] sm:w-[380px] h-[220px] sm:h-[240px] shrink-0 rounded-2xl overflow-hidden shadow-xl"
             >
-              {/* LAYER A: NORMAL PROJECT CARD (Clipped on scan) */}
+              {/* LAYER A: NORMAL PROJECT CARD (Right of line) */}
               <div
-                className="card-normal-layer absolute inset-0 z-10 flex flex-col justify-between p-5 sm:p-6 bg-[#fffaf0] text-[#563e3b] rounded-2xl transition-[clip-path]"
-                style={{
-                  clipPath: "inset(0 0 0 var(--clip-right, 0%))",
-                }}
+                className="card-normal-layer absolute inset-0 z-10 flex flex-col justify-between p-5 sm:p-6 bg-[#fffaf0] text-[#563e3b] rounded-2xl will-change-[clip-path]"
               >
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#ffaf37] bg-[#563e3b] px-2 py-0.5 rounded-md">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#ffaf37] bg-[#563e3b] px-2.5 py-0.5 rounded-full">
                       {item.category}
                     </span>
-                    <FolderGit2 className="h-5 w-5 text-[#563e3b]/50" />
+                    <FolderGit2 className="h-5 w-5 text-[#563e3b]/40" />
                   </div>
 
-                  <h3 className="mt-3 text-xl font-bold tracking-tight text-[#563e3b]">
+                  <h3 className="mt-3 text-lg sm:text-xl font-bold tracking-tight text-[#563e3b]">
                     {item.title}
                   </h3>
-                  <p className="mt-1.5 text-xs leading-relaxed text-[#563e3b]/75 line-clamp-2">
+                  <p className="mt-1 text-xs leading-relaxed text-[#563e3b]/75 line-clamp-2">
                     {item.tagline}
                   </p>
                 </div>
@@ -516,16 +336,13 @@ export default function ProjectScanner() {
                 </div>
               </div>
 
-              {/* LAYER B: SCANNED ASCII / MONOSPACE CODE (Revealed on scan) */}
+              {/* LAYER B: SCANNED SOURCE CODE (Left of line) */}
               <div
-                className="card-ascii-layer absolute inset-0 z-5 flex flex-col justify-between p-5 sm:p-6 bg-[#2d1c1a] text-[#ffaf37] rounded-2xl font-mono text-[11px] leading-[14px] overflow-hidden transition-[clip-path]"
-                style={{
-                  clipPath: "inset(0 calc(100% - var(--clip-left, 0%)) 0 0)",
-                }}
+                className="card-ascii-layer absolute inset-0 z-5 flex flex-col justify-between p-5 sm:p-6 bg-[#2d1c1a] text-[#ffaf37] rounded-2xl font-mono text-[11px] leading-[14px] overflow-hidden will-change-[clip-path]"
               >
                 <div className="flex items-center justify-between pb-2 border-b border-[#ffaf37]/20 text-[10px] uppercase tracking-wider text-[#ffaf37]/60">
                   <span>SRC: {item.title.toLowerCase()}.ts</span>
-                  <span className="animate-pulse text-[#ffaf37]">● SCANNED</span>
+                  <span className="text-[#ffaf37]">● SCANNED</span>
                 </div>
 
                 <pre className="my-auto whitespace-pre font-mono text-[10px] sm:text-[11px] text-[#ffaf37]/90 overflow-hidden leading-tight selection:bg-[#ffaf37] selection:text-[#2d1c1a]">
@@ -533,8 +350,8 @@ export default function ProjectScanner() {
                 </pre>
 
                 <div className="pt-2 border-t border-[#ffaf37]/20 flex items-center justify-between text-[10px] text-[#ffaf37]/60">
-                  <span>UTF-8 • READY</span>
-                  <span>ID: 0x{item.id}A</span>
+                  <span>UTF-8 • REPO READY</span>
+                  <span>0x{item.id}A</span>
                 </div>
               </div>
             </div>
@@ -542,9 +359,9 @@ export default function ProjectScanner() {
         </div>
       </div>
 
-      {/* 3. INSTRUCTION NOTE */}
-      <p className="mt-4 text-xs tracking-wider text-[#fffaf0]/50 font-mono text-center">
-        ← DRAG OR SCROLL TO SCAN PROJECTS THROUGH LASER →
+      {/* SUBTLE FOOTER INSTRUCTION */}
+      <p className="mt-4 text-[11px] tracking-[0.2em] uppercase text-[#fffaf0]/40 font-mono text-center">
+        ← Drag or scroll to inspect projects →
       </p>
     </div>
   );
