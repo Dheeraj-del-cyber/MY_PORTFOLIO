@@ -1,22 +1,23 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import DynamicIsland from "@/components/DynamicIsland";
-import InteractiveGrass from "@/components/InteractiveGrass";
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [ripples, setRipples] = useState<{ x: number; y: number; id: number }[]>([]);
 
-  // Mouse & physics tracking
-  const targetPos = useRef({ x: -1000, y: -1000 });
-  const currentPos = useRef({ x: -1000, y: -1000 });
-  const prevPos = useRef({ x: -1000, y: -1000 });
+  // Mouse & physics tracking (runs entirely outside React state to avoid re-renders)
+  const targetPos = useRef({ x: -2000, y: -2000 });
+  const currentPos = useRef({ x: -2000, y: -2000 });
+  const prevPos = useRef({ x: -2000, y: -2000 });
 
-  // DOM refs
+  // DOM element refs
   const fluidOrbRef = useRef<HTMLDivElement>(null);
+  const specularOrbRef = useRef<HTMLDivElement>(null);
   const letterRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const letterBoxes = useRef<{ cx: number; cy: number }[]>([]);
+  const letterActive = useRef<boolean[]>([]);
 
   const nameLetters = "DHEERAJ".split("");
 
@@ -28,8 +29,9 @@ export default function Home() {
     targetPos.current = { x: initX, y: initY };
     currentPos.current = { x: initX, y: initY };
     prevPos.current = { x: initX, y: initY };
+    letterActive.current = new Array(nameLetters.length).fill(false);
 
-    // Update letter center positions
+    // Cache letter centers
     const updateLetterBounds = () => {
       letterBoxes.current = letterRefs.current.map((el) => {
         if (!el) return { cx: 0, cy: 0 };
@@ -42,76 +44,92 @@ export default function Home() {
     };
 
     updateLetterBounds();
-    window.addEventListener("resize", updateLetterBounds);
+    window.addEventListener("resize", updateLetterBounds, { passive: true });
 
-    // Mouse & touch handlers
+    // Passive touch & mouse listeners for maximum frame rate
     const handleMouseMove = (e: MouseEvent) => {
-      targetPos.current = { x: e.clientX, y: e.clientY };
+      targetPos.current.x = e.clientX;
+      targetPos.current.y = e.clientY;
     };
 
     const handleTouchMove = (e: TouchEvent) => {
       if (e.touches.length > 0) {
-        targetPos.current = {
-          x: e.touches[0].clientX,
-          y: e.touches[0].clientY,
-        };
+        targetPos.current.x = e.touches[0].clientX;
+        targetPos.current.y = e.touches[0].clientY;
       }
+    };
+
+    const handleTouchEnd = () => {
+      // Gently return to center when finger lifts
+      targetPos.current.x = window.innerWidth * 0.5;
+      targetPos.current.y = window.innerHeight * 0.45;
     };
 
     window.addEventListener("mousemove", handleMouseMove, { passive: true });
     window.addEventListener("touchmove", handleTouchMove, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
 
-    // 120fps Animation Loop with Viscous Liquid Physics
+    // 120fps Hardware-Accelerated Animation Loop
     let animationFrameId: number;
 
     const animate = () => {
-      // 1. Lerp cursor for viscous fluid delay (inertia)
-      const lerpFactor = 0.14;
-      currentPos.current.x += (targetPos.current.x - currentPos.current.x) * lerpFactor;
-      currentPos.current.y += (targetPos.current.y - currentPos.current.y) * lerpFactor;
+      // 1. Viscous inertia lerp (linear interpolation)
+      const lerp = 0.16;
+      currentPos.current.x += (targetPos.current.x - currentPos.current.x) * lerp;
+      currentPos.current.y += (targetPos.current.y - currentPos.current.y) * lerp;
 
-      // 2. Velocity for organic droplet stretch
+      // 2. Velocity computation for organic droplet stretch
       const vx = currentPos.current.x - prevPos.current.x;
       const vy = currentPos.current.y - prevPos.current.y;
-      prevPos.current = { x: currentPos.current.x, y: currentPos.current.y };
+      prevPos.current.x = currentPos.current.x;
+      prevPos.current.y = currentPos.current.y;
 
       const speed = Math.hypot(vx, vy);
       const angle = Math.atan2(vy, vx);
-      const stretchX = Math.min(1 + speed * 0.012, 1.45);
-      const stretchY = Math.max(1 - speed * 0.008, 0.72);
+      const stretchX = Math.min(1 + speed * 0.01, 1.35);
+      const stretchY = Math.max(1 - speed * 0.007, 0.75);
 
-      // 3. Update Fluid Orb Position & Fluid Deformation
+      // 3. Update Ambient Fluid Orb (Zero React re-render)
       if (fluidOrbRef.current) {
         fluidOrbRef.current.style.transform = `translate3d(${currentPos.current.x}px, ${currentPos.current.y}px, 0) translate(-50%, -50%) rotate(${angle}rad) scale(${stretchX}, ${stretchY})`;
       }
 
-      // 4. Magnetic Lift & Fluid Pull on each letter
-      const magneticRadius = 260;
+      // 4. Update Specular Core (Zero React re-render)
+      if (specularOrbRef.current) {
+        specularOrbRef.current.style.transform = `translate3d(${targetPos.current.x}px, ${targetPos.current.y}px, 0) translate(-50%, -50%)`;
+      }
 
-      letterRefs.current.forEach((el, index) => {
-        if (!el || !letterBoxes.current[index]) return;
+      // 5. Magnetic Levitation Physics for Letters
+      const magneticRadius = 240;
 
-        const { cx, cy } = letterBoxes.current[index];
-        const dx = currentPos.current.x - cx;
-        const dy = currentPos.current.y - cy;
+      for (let i = 0; i < letterRefs.current.length; i++) {
+        const el = letterRefs.current[i];
+        const box = letterBoxes.current[i];
+        if (!el || !box) continue;
+
+        const dx = currentPos.current.x - box.cx;
+        const dy = currentPos.current.y - box.cy;
         const dist = Math.hypot(dx, dy);
 
         if (dist < magneticRadius) {
-          const power = Math.pow(1 - dist / magneticRadius, 1.6);
-          const pullX = dx * power * 0.38;
-          const pullY = dy * power * 0.38 - power * 22;
-          const scale = 1 + power * 0.16;
-          const rotate = (dx / magneticRadius) * 16 * power;
+          letterActive.current[i] = true;
+          // Smooth power falloff
+          const power = Math.pow(1 - dist / magneticRadius, 1.5);
+          const pullX = dx * power * 0.35;
+          const pullY = dy * power * 0.35 - power * 20;
+          const scale = 1 + power * 0.14;
+          const rotate = (dx / magneticRadius) * 14 * power;
 
+          // Pure GPU compositing properties
           el.style.transform = `translate3d(${pullX}px, ${pullY}px, 0) scale(${scale}) rotate(${rotate}deg)`;
-          el.style.textShadow = `0 ${power * 16}px ${power * 24}px rgba(86, 62, 59, 0.18), 0 0 ${power * 30}px rgba(255, 175, 55, 0.4)`;
-          el.style.color = power > 0.45 ? "#ffaf37" : "#563e3b";
-        } else {
-          el.style.transform = `translate3d(0, 0, 0) scale(1) rotate(0deg)`;
-          el.style.textShadow = `none`;
+          el.style.color = power > 0.4 ? "#ffaf37" : "#563e3b";
+        } else if (letterActive.current[i]) {
+          // Reset to rest state only once when exiting radius
+          letterActive.current[i] = false;
+          el.style.transform = "translate3d(0, 0, 0) scale(1) rotate(0deg)";
           el.style.color = "#563e3b";
         }
-      });
+      }
 
       animationFrameId = requestAnimationFrame(animate);
     };
@@ -122,6 +140,7 @@ export default function Home() {
       window.removeEventListener("resize", updateLetterBounds);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
       cancelAnimationFrame(animationFrameId);
     };
   }, []);
@@ -129,56 +148,48 @@ export default function Home() {
   // Click / Tap creates a fluid shockwave ripple
   const handleCanvasClick = (e: React.MouseEvent) => {
     const newRipple = { x: e.clientX, y: e.clientY, id: Date.now() };
-    setRipples((prev) => [...prev.slice(-3), newRipple]);
+    setRipples((prev) => [...prev.slice(-2), newRipple]);
 
     setTimeout(() => {
       setRipples((prev) => prev.filter((r) => r.id !== newRipple.id));
-    }, 900);
+    }, 800);
   };
 
   return (
     <main
       onClick={handleCanvasClick}
-      className="relative flex h-[100dvh] w-screen items-center justify-center overflow-hidden bg-[#fffaf0] p-4 sm:p-8 text-[#563e3b] select-none cursor-default"
+      className="relative flex h-[100dvh] w-screen items-center justify-center overflow-hidden bg-[#fffaf0] p-4 sm:p-8 text-[#563e3b] select-none touch-manipulation cursor-default"
     >
-      {/* 1. TACTILE PAPER GRAIN TEXTURE */}
-      <svg
-        className="pointer-events-none fixed inset-0 h-full w-full opacity-[0.045] mix-blend-multiply z-30"
+      {/* 1. TACTILE PAPER GRAIN (Hardware-Accelerated Rasterized Pattern) */}
+      <div
         aria-hidden="true"
-      >
-        <filter id="paper-grain">
-          <feTurbulence
-            type="fractalNoise"
-            baseFrequency="0.75"
-            numOctaves="4"
-            stitchTiles="stitch"
-          />
-          <feColorMatrix type="saturate" values="0" />
-        </filter>
-        <rect width="100%" height="100%" filter="url(#paper-grain)" />
-      </svg>
+        className="pointer-events-none fixed inset-0 h-full w-full opacity-[0.035] mix-blend-multiply z-30 transform-gpu"
+        style={{
+          backgroundImage: `radial-gradient(#563e3b 0.75px, transparent 0.75px)`,
+          backgroundSize: "16px 16px",
+        }}
+      />
 
-      {/* 2. LIQUID FLUID ORB (Magnetic Viscous Droplet) */}
+      {/* 2. LIQUID FLUID ORB (GPU Composited) */}
       <div
         ref={fluidOrbRef}
         aria-hidden="true"
-        className="pointer-events-none fixed top-0 left-0 h-[480px] w-[480px] rounded-full will-change-transform z-10"
+        className="pointer-events-none fixed top-0 left-0 h-[440px] w-[440px] rounded-full will-change-transform z-10 transform-gpu"
         style={{
           background:
-            "radial-gradient(circle, rgba(255, 175, 55, 0.32) 0%, rgba(255, 175, 55, 0.16) 35%, rgba(243, 233, 216, 0.12) 60%, transparent 75%)",
-          filter: "blur(36px)",
+            "radial-gradient(circle, rgba(255, 175, 55, 0.28) 0%, rgba(255, 175, 55, 0.14) 35%, rgba(243, 233, 216, 0.1) 60%, transparent 75%)",
+          filter: "blur(40px)",
           mixBlendMode: "multiply",
         }}
       />
 
-      {/* Viscous Magnetic Specular Core */}
+      {/* Viscous Magnetic Specular Core (GPU Composited) */}
       <div
+        ref={specularOrbRef}
         aria-hidden="true"
-        className="pointer-events-none fixed top-0 left-0 h-40 w-40 rounded-full blur-2xl z-10 opacity-70"
+        className="pointer-events-none fixed top-0 left-0 h-32 w-32 rounded-full blur-xl z-10 opacity-70 transform-gpu will-change-transform"
         style={{
-          transform: `translate3d(${targetPos.current.x}px, ${targetPos.current.y}px, 0) translate(-50%, -50%)`,
-          background: "radial-gradient(circle, rgba(255, 175, 55, 0.4) 0%, transparent 70%)",
-          transition: "transform 80ms ease-out",
+          background: "radial-gradient(circle, rgba(255, 175, 55, 0.45) 0%, transparent 70%)",
         }}
       />
 
@@ -190,10 +201,10 @@ export default function Home() {
           style={{
             left: r.x,
             top: r.y,
-            width: "160px",
-            height: "160px",
+            width: "140px",
+            height: "140px",
             transform: "translate(-50%, -50%)",
-            animationDuration: "900ms",
+            animationDuration: "800ms",
           }}
         />
       ))}
@@ -210,16 +221,16 @@ export default function Home() {
               ref={(el) => {
                 letterRefs.current[index] = el;
               }}
-              className="inline-block transition-transform duration-100 ease-out will-change-transform cursor-pointer"
+              className="inline-block will-change-transform transform-gpu select-none"
+              style={{
+                transition: "color 150ms ease-out",
+              }}
             >
               {letter}
             </span>
           ))}
         </h1>
       </div>
-
-      {/* 7. INTERACTIVE PROCEDURAL GRASS (Atmospheric Natural Base) */}
-      <InteractiveGrass />
     </main>
   );
 }

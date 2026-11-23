@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X, ArrowUpRight, Sparkles, FolderGit2, Mail, ExternalLink } from "lucide-react";
 import { GithubIcon, LinkedinIcon } from "@/components/Icons";
 
@@ -13,6 +13,17 @@ export default function DynamicIsland() {
   const [activeView, setActiveView] = useState<ActiveView>(null);
   const [contentVisible, setContentVisible] = useState(false);
   const isTransitioningRef = useRef(false);
+
+  // Keyboard accessibility: Escape closes modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && stage === "fullscreen") {
+        handleClose(e as unknown as React.MouseEvent);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [stage]);
 
   // Smooth opening sequence: Width -> Height -> Content Fade In
   const handleOpenView = (e: React.MouseEvent, view: ActiveView) => {
@@ -32,8 +43,8 @@ export default function DynamicIsland() {
       setTimeout(() => {
         setContentVisible(true);
         isTransitioningRef.current = false;
-      }, 400);
-    }, 320);
+      }, 380);
+    }, 300);
   };
 
   // Smooth closing sequence: Content Fade Out -> Height Collapse -> Width Collapse
@@ -55,8 +66,8 @@ export default function DynamicIsland() {
         setActiveView(null);
         setIsHovered(false);
         isTransitioningRef.current = false;
-      }, 380);
-    }, 150);
+      }, 350);
+    }, 120);
   };
 
   // Deterministic GPU-friendly styles
@@ -67,8 +78,9 @@ export default function DynamicIsland() {
         height: "100dvh",
         top: "0px",
         borderRadius: "0px",
+        transform: "translate3d(-50%, 0, 0)",
         transition:
-          "height 420ms cubic-bezier(0.16, 1, 0.3, 1), top 420ms cubic-bezier(0.16, 1, 0.3, 1), border-radius 360ms cubic-bezier(0.16, 1, 0.3, 1), width 320ms cubic-bezier(0.16, 1, 0.3, 1)",
+          "height 400ms cubic-bezier(0.16, 1, 0.3, 1), top 400ms cubic-bezier(0.16, 1, 0.3, 1), border-radius 340ms cubic-bezier(0.16, 1, 0.3, 1), width 300ms cubic-bezier(0.16, 1, 0.3, 1)",
       };
     }
 
@@ -78,19 +90,21 @@ export default function DynamicIsland() {
         height: "48px",
         top: "1rem",
         borderRadius: "9999px",
+        transform: "translate3d(-50%, 0, 0)",
         transition:
-          "width 320ms cubic-bezier(0.16, 1, 0.3, 1), height 380ms cubic-bezier(0.16, 1, 0.3, 1), top 380ms cubic-bezier(0.16, 1, 0.3, 1), border-radius 340ms cubic-bezier(0.16, 1, 0.3, 1)",
+          "width 300ms cubic-bezier(0.16, 1, 0.3, 1), height 360ms cubic-bezier(0.16, 1, 0.3, 1), top 360ms cubic-bezier(0.16, 1, 0.3, 1), border-radius 320ms cubic-bezier(0.16, 1, 0.3, 1)",
       };
     }
 
-    // Idle State
+    // Idle State (Mobile responsive width: min(280px, calc(100vw - 2rem)))
     return {
-      width: isHovered ? "280px" : "105px",
+      width: isHovered ? "min(280px, calc(100vw - 2rem))" : "105px",
       height: isHovered ? "46px" : "38px",
       top: "1.25rem",
       borderRadius: "9999px",
+      transform: "translate3d(-50%, 0, 0)",
       transition:
-        "width 300ms cubic-bezier(0.16, 1, 0.3, 1), height 280ms cubic-bezier(0.16, 1, 0.3, 1), top 300ms cubic-bezier(0.16, 1, 0.3, 1), border-radius 280ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "width 280ms cubic-bezier(0.16, 1, 0.3, 1), height 260ms cubic-bezier(0.16, 1, 0.3, 1), top 280ms cubic-bezier(0.16, 1, 0.3, 1), border-radius 260ms cubic-bezier(0.16, 1, 0.3, 1)",
     };
   };
 
@@ -108,7 +122,7 @@ export default function DynamicIsland() {
           setIsHovered((prev) => !prev);
         }
       }}
-      className={`fixed left-1/2 -translate-x-1/2 z-50 bg-[#563e3b] text-[#fffaf0] shadow-xl select-none transform-gpu will-change-[width,height,top,border-radius] ${
+      className={`fixed left-1/2 z-50 bg-[#563e3b] text-[#fffaf0] shadow-xl select-none transform-gpu will-change-[width,height,top,border-radius,transform] touch-manipulation ${
         stage === "fullscreen" && contentVisible
           ? "overflow-y-auto p-6 sm:p-12 md:p-16 cursor-default"
           : "overflow-hidden flex items-center justify-center cursor-pointer"
@@ -122,11 +136,11 @@ export default function DynamicIsland() {
               MENU
             </span>
           ) : (
-            <nav className="animate-fade-in flex items-center gap-3.5 sm:gap-4.5 text-xs font-medium tracking-[0.16em] uppercase text-[#fffaf0]">
+            <nav className="animate-fade-in flex items-center gap-3 sm:gap-4.5 text-xs font-medium tracking-[0.16em] uppercase text-[#fffaf0]">
               <button
                 type="button"
                 onClick={(e) => handleOpenView(e, "about")}
-                className="transition-colors duration-200 hover:text-[#ffaf37] cursor-pointer"
+                className="transition-colors duration-150 hover:text-[#ffaf37] active:scale-95 cursor-pointer py-1.5"
               >
                 About
               </button>
@@ -134,7 +148,7 @@ export default function DynamicIsland() {
               <button
                 type="button"
                 onClick={(e) => handleOpenView(e, "projects")}
-                className="transition-colors duration-200 hover:text-[#ffaf37] cursor-pointer"
+                className="transition-colors duration-150 hover:text-[#ffaf37] active:scale-95 cursor-pointer py-1.5"
               >
                 Projects
               </button>
@@ -142,7 +156,7 @@ export default function DynamicIsland() {
               <button
                 type="button"
                 onClick={(e) => handleOpenView(e, "contact")}
-                className="transition-colors duration-200 hover:text-[#ffaf37] cursor-pointer"
+                className="transition-colors duration-150 hover:text-[#ffaf37] active:scale-95 cursor-pointer py-1.5"
               >
                 Contact
               </button>
@@ -186,7 +200,7 @@ export default function DynamicIsland() {
             <button
               type="button"
               onClick={handleClose}
-              className="group flex items-center gap-2 rounded-full border border-[#fffaf0]/20 bg-[#fffaf0]/10 px-4 py-2 text-xs font-medium text-[#fffaf0] transition-all hover:bg-[#ffaf37] hover:border-[#ffaf37] hover:text-[#563e3b] active:scale-95 cursor-pointer"
+              className="group flex min-h-[44px] items-center gap-2 rounded-full border border-[#fffaf0]/20 bg-[#fffaf0]/10 px-5 py-2 text-xs font-medium text-[#fffaf0] transition-all hover:bg-[#ffaf37] hover:border-[#ffaf37] hover:text-[#563e3b] active:scale-95 cursor-pointer"
             >
               <span>Close</span>
               <X className="h-3.5 w-3.5 transition-transform group-hover:rotate-90 duration-200" />
@@ -326,7 +340,7 @@ export default function DynamicIsland() {
               <div className="mt-8 flex flex-col sm:flex-row gap-4">
                 <a
                   href="mailto:contact@dheeraj.dev"
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#ffaf37] px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-[#563e3b] transition hover:bg-[#ffbe53] active:scale-95"
+                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-[#ffaf37] px-6 py-3 text-xs font-semibold uppercase tracking-wider text-[#563e3b] transition hover:bg-[#ffbe53] active:scale-95"
                 >
                   <Mail className="h-4 w-4" />
                   <span>contact@dheeraj.dev</span>
