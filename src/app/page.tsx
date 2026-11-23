@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import DynamicIsland from "@/components/DynamicIsland";
 
 export default function Home() {
   const [key, setKey] = useState(0);
   const name = "DHEERAJ";
 
   return (
-    <main className="flex h-[100dvh] w-screen items-center justify-center overflow-hidden bg-[#fffaf0] p-4 sm:p-8 text-[#563e3b] select-none">
+    <main className="relative flex h-[100dvh] w-screen items-center justify-center overflow-hidden bg-[#fffaf0] p-4 sm:p-8 text-[#563e3b] select-none">
+      <DynamicIsland />
+
       <h1
         key={key}
         onClick={() => setKey((prev) => prev + 1)}
