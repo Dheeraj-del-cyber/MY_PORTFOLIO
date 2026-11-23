@@ -123,10 +123,12 @@ export default function DynamicIsland() {
           setIsHovered((prev) => !prev);
         }
       }}
-      className={`fixed left-1/2 z-50 bg-[#563e3b] text-[#fffaf0] shadow-xl select-none transform-gpu will-change-[width,height,top,border-radius,transform] touch-manipulation ${
+      className={`fixed left-1/2 z-50 bg-[#563e3b] text-[#fffaf0] shadow-xl select-none transform-gpu will-change-[width,height,top,border-radius,transform] touch-manipulation overflow-hidden ${
         stage === "fullscreen" && contentVisible
-          ? "overflow-y-auto p-6 sm:p-12 md:p-16 cursor-default"
-          : "overflow-hidden flex items-center justify-center cursor-pointer"
+          ? activeView === "projects"
+            ? "p-0 py-3 sm:py-5 cursor-default"
+            : "p-4 sm:p-6 md:p-8 cursor-default"
+          : "flex items-center justify-center cursor-pointer"
       }`}
     >
       {/* 1. IDLE STATE: MENU OR [ABOUT • PROJECTS • CONTACT] */}
@@ -181,16 +183,16 @@ export default function DynamicIsland() {
       {/* 3. FULLSCREEN VIEWS */}
       {stage === "fullscreen" && (
         <div
-          className={`relative mx-auto flex min-h-full ${
-            activeView === "projects" ? "max-w-6xl w-full" : "max-w-4xl"
-          } flex-col justify-between transition-all duration-300 ease-out ${
+          className={`relative mx-auto flex h-full max-h-full w-full flex-col justify-between overflow-hidden transition-all duration-300 ease-out ${
             contentVisible
               ? "opacity-100 translate-y-0"
               : "opacity-0 translate-y-3 pointer-events-none"
           }`}
         >
           {/* Top Bar inside Fullscreen */}
-          <header className="flex w-full items-center justify-between pb-8 border-b border-[#fffaf0]/15">
+          <header className={`flex w-full items-center justify-between pb-3 sm:pb-4 border-b border-[#fffaf0]/15 shrink-0 ${
+            activeView === "projects" ? "max-w-6xl mx-auto px-4 sm:px-6 md:px-8" : "max-w-4xl mx-auto px-4 sm:px-6 w-full"
+          }`}>
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-[#ffaf37]" />
               <span className="text-xs sm:text-sm font-semibold tracking-[0.2em] uppercase text-[#fffaf0]">
@@ -203,7 +205,7 @@ export default function DynamicIsland() {
             <button
               type="button"
               onClick={handleClose}
-              className="group flex min-h-[44px] items-center gap-2 rounded-full border border-[#fffaf0]/20 bg-[#fffaf0]/10 px-5 py-2 text-xs font-medium text-[#fffaf0] transition-all hover:bg-[#ffaf37] hover:border-[#ffaf37] hover:text-[#563e3b] active:scale-95 cursor-pointer"
+              className="group flex min-h-[40px] items-center gap-2 rounded-full border border-[#fffaf0]/20 bg-[#fffaf0]/10 px-4 sm:px-5 py-1.5 text-xs font-medium text-[#fffaf0] transition-all hover:bg-[#ffaf37] hover:border-[#ffaf37] hover:text-[#563e3b] active:scale-95 cursor-pointer"
             >
               <span>Close</span>
               <X className="h-3.5 w-3.5 transition-transform group-hover:rotate-90 duration-200" />
@@ -212,16 +214,16 @@ export default function DynamicIsland() {
 
           {/* VIEW 1: ABOUT */}
           {activeView === "about" && (
-            <main className="my-auto py-10 sm:py-16">
-              <span className="inline-block text-xs uppercase tracking-[0.25em] text-[#ffaf37] font-semibold">
+            <main className="my-auto py-2 sm:py-6 overflow-hidden flex-1 flex flex-col justify-center min-h-0 max-w-4xl mx-auto px-4 sm:px-6 w-full">
+              <span className="inline-block text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[#ffaf37] font-semibold">
                 Editorial Biography
               </span>
 
-              <h2 className="mt-3 font-[family-name:var(--font-serif)] text-3xl sm:text-5xl md:text-6xl italic leading-tight tracking-tight text-[#fffaf0]">
+              <h2 className="mt-2 font-[family-name:var(--font-serif)] text-2xl sm:text-4xl md:text-5xl italic leading-tight tracking-tight text-[#fffaf0]">
                 Crafting thoughtful digital interfaces and engineering scalable web systems.
               </h2>
 
-              <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-2 text-sm sm:text-base leading-relaxed text-[#fffaf0]/80">
+              <div className="mt-4 sm:mt-6 grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 text-xs sm:text-sm md:text-base leading-relaxed text-[#fffaf0]/80">
                 <p>
                   I'm Dheeraj, a software developer and designer passionate about creating minimal, elegant, and highly performant digital products. I combine editorial visual sensibilities with rigorous engineering principles.
                 </p>
@@ -231,11 +233,11 @@ export default function DynamicIsland() {
               </div>
 
               {/* Core Disciplines */}
-              <div className="mt-12 pt-8 border-t border-[#fffaf0]/15">
-                <span className="text-xs uppercase tracking-widest text-[#fffaf0]/50 font-medium">
+              <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-[#fffaf0]/15">
+                <span className="text-[10px] sm:text-xs uppercase tracking-widest text-[#fffaf0]/50 font-medium">
                   Core Disciplines
                 </span>
-                <div className="mt-4 flex flex-wrap gap-2.5">
+                <div className="mt-3 flex flex-wrap gap-2">
                   {[
                     "Next.js & React",
                     "TypeScript",
@@ -247,7 +249,7 @@ export default function DynamicIsland() {
                   ].map((skill) => (
                     <span
                       key={skill}
-                      className="rounded-full border border-[#fffaf0]/15 bg-[#fffaf0]/5 px-3.5 py-1 text-xs font-medium text-[#fffaf0]/90"
+                      className="rounded-full border border-[#fffaf0]/15 bg-[#fffaf0]/5 px-3 py-1 text-[11px] sm:text-xs font-medium text-[#fffaf0]/90"
                     >
                       {skill}
                     </span>
@@ -259,40 +261,40 @@ export default function DynamicIsland() {
 
           {/* VIEW 2: PROJECTS */}
           {activeView === "projects" && (
-            <main className="my-auto py-6 sm:py-8 w-full">
-              <div className="text-center mb-3">
-                <span className="inline-block text-xs uppercase tracking-[0.25em] text-[#ffaf37] font-semibold">
+            <main className="w-full flex-1 flex flex-col justify-center min-h-0 overflow-hidden py-1">
+              <div className="text-center mb-1 shrink-0 px-4">
+                <span className="inline-block text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[#ffaf37] font-semibold">
                   Interactive Projects Stream
                 </span>
-                <h2 className="mt-1 font-[family-name:var(--font-serif)] text-2xl sm:text-4xl md:text-5xl italic leading-tight tracking-tight text-[#fffaf0]">
+                <h2 className="mt-0.5 font-[family-name:var(--font-serif)] text-xl sm:text-3xl md:text-4xl italic leading-tight tracking-tight text-[#fffaf0]">
                   Scan to reveal source code.
                 </h2>
               </div>
 
-              {/* The Evervault Card Scanner */}
+              {/* The Evervault Card Scanner - Full Screen End to End with 3D Circular Orbit */}
               <ProjectScanner />
             </main>
           )}
 
           {/* VIEW 3: CONTACT */}
           {activeView === "contact" && (
-            <main className="my-auto py-10 sm:py-16">
-              <span className="inline-block text-xs uppercase tracking-[0.25em] text-[#ffaf37] font-semibold">
+            <main className="my-auto py-2 sm:py-6 overflow-hidden flex-1 flex flex-col justify-center min-h-0 max-w-4xl mx-auto px-4 sm:px-6 w-full">
+              <span className="inline-block text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[#ffaf37] font-semibold">
                 Direct Communication
               </span>
 
-              <h2 className="mt-3 font-[family-name:var(--font-serif)] text-3xl sm:text-5xl md:text-6xl italic leading-tight tracking-tight text-[#fffaf0]">
+              <h2 className="mt-2 font-[family-name:var(--font-serif)] text-2xl sm:text-4xl md:text-5xl italic leading-tight tracking-tight text-[#fffaf0]">
                 Let's start a conversation.
               </h2>
 
-              <p className="mt-4 max-w-xl text-sm sm:text-base leading-relaxed text-[#fffaf0]/80">
+              <p className="mt-3 sm:mt-4 max-w-xl text-xs sm:text-sm md:text-base leading-relaxed text-[#fffaf0]/80">
                 Whether you have an inquiry about a prospective project, an engineering role, or simply want to say hello, feel free to connect anytime.
               </p>
 
-              <div className="mt-8 flex flex-col sm:flex-row gap-4">
+              <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <a
                   href="mailto:contact@dheeraj.dev"
-                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-[#ffaf37] px-6 py-3 text-xs font-semibold uppercase tracking-wider text-[#563e3b] transition hover:bg-[#ffbe53] active:scale-95"
+                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-[#ffaf37] px-6 py-2.5 sm:py-3 text-xs font-semibold uppercase tracking-wider text-[#563e3b] transition hover:bg-[#ffbe53] active:scale-95"
                 >
                   <Mail className="h-4 w-4" />
                   <span>contact@dheeraj.dev</span>
@@ -323,7 +325,9 @@ export default function DynamicIsland() {
           )}
 
           {/* Footer inside Fullscreen */}
-          <footer className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 border-t border-[#fffaf0]/15 text-xs text-[#fffaf0]/60">
+          <footer className={`flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 pt-3 sm:pt-4 border-t border-[#fffaf0]/15 text-xs text-[#fffaf0]/60 shrink-0 ${
+            activeView === "projects" ? "max-w-6xl mx-auto px-4 sm:px-6 md:px-8" : "max-w-4xl mx-auto px-4 sm:px-6 w-full"
+          }`}>
             <span>Available for select freelance & full-time opportunities</span>
             <a
               href="mailto:contact@dheeraj.dev"
