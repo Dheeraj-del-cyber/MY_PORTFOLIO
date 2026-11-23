@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { X, ArrowUpRight, Sparkles, FolderGit2, Mail, ExternalLink } from "lucide-react";
 import { GithubIcon, LinkedinIcon } from "@/components/Icons";
+import ProjectScanner from "@/components/ProjectScanner";
 
 type Stage = "idle" | "horizontal" | "fullscreen";
 type ActiveView = "about" | "projects" | "contact" | null;
@@ -180,7 +181,9 @@ export default function DynamicIsland() {
       {/* 3. FULLSCREEN VIEWS */}
       {stage === "fullscreen" && (
         <div
-          className={`relative mx-auto flex min-h-full max-w-4xl flex-col justify-between transition-all duration-300 ease-out ${
+          className={`relative mx-auto flex min-h-full ${
+            activeView === "projects" ? "max-w-6xl w-full" : "max-w-4xl"
+          } flex-col justify-between transition-all duration-300 ease-out ${
             contentVisible
               ? "opacity-100 translate-y-0"
               : "opacity-0 translate-y-3 pointer-events-none"
@@ -256,69 +259,18 @@ export default function DynamicIsland() {
 
           {/* VIEW 2: PROJECTS */}
           {activeView === "projects" && (
-            <main className="my-auto py-10 sm:py-16">
-              <span className="inline-block text-xs uppercase tracking-[0.25em] text-[#ffaf37] font-semibold">
-                Portfolio Showcase
-              </span>
-
-              <h2 className="mt-3 font-[family-name:var(--font-serif)] text-3xl sm:text-5xl md:text-6xl italic leading-tight tracking-tight text-[#fffaf0]">
-                Featured Works & Systems.
-              </h2>
-
-              <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {[
-                  {
-                    title: "PulseFlow",
-                    category: "Collaborative Platform",
-                    description: "Real-time document editor and team workspace with WebSockets and instant synchronization.",
-                    tags: ["Next.js", "TypeScript", "Tailwind CSS"],
-                  },
-                  {
-                    title: "DevMetrics",
-                    category: "Observability Hub",
-                    description: "Developer telemetry dashboard providing latency breakdown and uptime metrics.",
-                    tags: ["React", "APIs", "Data Viz"],
-                  },
-                  {
-                    title: "StoreCraft",
-                    category: "Headless E-Commerce",
-                    description: "Ultra-fast headless digital storefront with cart persistence and Stripe checkout.",
-                    tags: ["Next.js", "Stripe", "Performance"],
-                  },
-                ].map((item, idx) => (
-                  <article
-                    key={idx}
-                    className="group flex flex-col justify-between rounded-2xl border border-[#fffaf0]/15 bg-[#fffaf0]/5 p-6 transition-all hover:bg-[#fffaf0]/10 hover:border-[#ffaf37]/40"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <FolderGit2 className="h-5 w-5 text-[#ffaf37]" />
-                        <ExternalLink className="h-4 w-4 text-[#fffaf0]/40 group-hover:text-[#ffaf37] transition-colors" />
-                      </div>
-                      <span className="mt-4 block text-[11px] font-medium tracking-wider uppercase text-[#ffaf37]">
-                        {item.category}
-                      </span>
-                      <h3 className="mt-1 text-xl font-bold text-[#fffaf0]">
-                        {item.title}
-                      </h3>
-                      <p className="mt-2 text-xs leading-relaxed text-[#fffaf0]/70">
-                        {item.description}
-                      </p>
-                    </div>
-
-                    <div className="mt-6 flex flex-wrap gap-1.5 pt-4 border-t border-[#fffaf0]/10">
-                      {item.tags.map((t) => (
-                        <span
-                          key={t}
-                          className="rounded-md bg-[#fffaf0]/10 px-2 py-0.5 text-[10px] font-medium text-[#fffaf0]/80"
-                        >
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  </article>
-                ))}
+            <main className="my-auto py-6 sm:py-8 w-full">
+              <div className="text-center mb-3">
+                <span className="inline-block text-xs uppercase tracking-[0.25em] text-[#ffaf37] font-semibold">
+                  Interactive Projects Stream
+                </span>
+                <h2 className="mt-1 font-[family-name:var(--font-serif)] text-2xl sm:text-4xl md:text-5xl italic leading-tight tracking-tight text-[#fffaf0]">
+                  Scan to reveal source code.
+                </h2>
               </div>
+
+              {/* The Evervault Card Scanner */}
+              <ProjectScanner />
             </main>
           )}
 
