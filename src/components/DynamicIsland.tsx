@@ -1,21 +1,25 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { X, ArrowUpRight, Sparkles } from "lucide-react";
+import { X, ArrowUpRight, Sparkles, FolderGit2, Mail, ExternalLink } from "lucide-react";
+import { GithubIcon, LinkedinIcon } from "@/components/Icons";
 
 type Stage = "idle" | "horizontal" | "fullscreen";
+type ActiveView = "about" | "projects" | "contact" | null;
 
 export default function DynamicIsland() {
   const [isHovered, setIsHovered] = useState(false);
   const [stage, setStage] = useState<Stage>("idle");
+  const [activeView, setActiveView] = useState<ActiveView>(null);
   const [contentVisible, setContentVisible] = useState(false);
   const isTransitioningRef = useRef(false);
 
   // Smooth opening sequence: Width -> Height -> Content Fade In
-  const handleOpenAbout = (e: React.MouseEvent) => {
+  const handleOpenView = (e: React.MouseEvent, view: ActiveView) => {
     e.stopPropagation();
     if (isTransitioningRef.current || stage !== "idle") return;
     isTransitioningRef.current = true;
+    setActiveView(view);
 
     // Phase 1: Expand horizontally
     setStage("horizontal");
@@ -33,7 +37,7 @@ export default function DynamicIsland() {
   };
 
   // Smooth closing sequence: Content Fade Out -> Height Collapse -> Width Collapse
-  const handleCloseAbout = (e: React.MouseEvent) => {
+  const handleClose = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isTransitioningRef.current || stage !== "fullscreen") return;
     isTransitioningRef.current = true;
@@ -48,6 +52,7 @@ export default function DynamicIsland() {
       // Phase 3: Shrink width back into the compact pill
       setTimeout(() => {
         setStage("idle");
+        setActiveView(null);
         setIsHovered(false);
         isTransitioningRef.current = false;
       }, 380);
@@ -80,8 +85,8 @@ export default function DynamicIsland() {
 
     // Idle State
     return {
-      width: isHovered ? "160px" : "105px",
-      height: isHovered ? "44px" : "38px",
+      width: isHovered ? "280px" : "105px",
+      height: isHovered ? "46px" : "38px",
       top: "1.25rem",
       borderRadius: "9999px",
       transition:
@@ -109,21 +114,39 @@ export default function DynamicIsland() {
           : "overflow-hidden flex items-center justify-center cursor-pointer"
       }`}
     >
-      {/* 1. IDLE STATE: MENU or ABOUT */}
+      {/* 1. IDLE STATE: MENU OR [ABOUT • PROJECTS • CONTACT] */}
       {stage === "idle" && (
-        <div className="flex h-full w-full items-center justify-center px-4">
+        <div className="flex h-full w-full items-center justify-center px-3">
           {!isHovered ? (
             <span className="text-xs font-semibold tracking-[0.2em] uppercase text-[#fffaf0] transition-opacity duration-200">
               MENU
             </span>
           ) : (
-            <button
-              type="button"
-              onClick={handleOpenAbout}
-              className="animate-fade-in text-xs font-medium tracking-[0.2em] uppercase text-[#fffaf0] transition-colors duration-200 hover:text-[#ffaf37]"
-            >
-              About
-            </button>
+            <nav className="animate-fade-in flex items-center gap-3.5 sm:gap-4.5 text-xs font-medium tracking-[0.16em] uppercase text-[#fffaf0]">
+              <button
+                type="button"
+                onClick={(e) => handleOpenView(e, "about")}
+                className="transition-colors duration-200 hover:text-[#ffaf37] cursor-pointer"
+              >
+                About
+              </button>
+              <span className="text-[#fffaf0]/25 select-none text-[10px]">•</span>
+              <button
+                type="button"
+                onClick={(e) => handleOpenView(e, "projects")}
+                className="transition-colors duration-200 hover:text-[#ffaf37] cursor-pointer"
+              >
+                Projects
+              </button>
+              <span className="text-[#fffaf0]/25 select-none text-[10px]">•</span>
+              <button
+                type="button"
+                onClick={(e) => handleOpenView(e, "contact")}
+                className="transition-colors duration-200 hover:text-[#ffaf37] cursor-pointer"
+              >
+                Contact
+              </button>
+            </nav>
           )}
         </div>
       )}
@@ -134,13 +157,13 @@ export default function DynamicIsland() {
           <span className="text-xs font-semibold tracking-widest uppercase text-[#fffaf0]/80">
             DHEERAJ
           </span>
-          <span className="text-xs tracking-wider text-[#ffaf37]">
-            About
+          <span className="text-xs tracking-wider text-[#ffaf37] capitalize">
+            {activeView}
           </span>
         </div>
       )}
 
-      {/* 3. FULLSCREEN ABOUT PAGE CONTENT */}
+      {/* 3. FULLSCREEN VIEWS */}
       {stage === "fullscreen" && (
         <div
           className={`relative mx-auto flex min-h-full max-w-4xl flex-col justify-between transition-all duration-300 ease-out ${
@@ -149,18 +172,20 @@ export default function DynamicIsland() {
               : "opacity-0 translate-y-3 pointer-events-none"
           }`}
         >
-          {/* Top Bar inside About */}
+          {/* Top Bar inside Fullscreen */}
           <header className="flex w-full items-center justify-between pb-8 border-b border-[#fffaf0]/15">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-[#ffaf37]" />
               <span className="text-xs sm:text-sm font-semibold tracking-[0.2em] uppercase text-[#fffaf0]">
-                About Dheeraj
+                {activeView === "about" && "About Dheeraj"}
+                {activeView === "projects" && "Selected Projects"}
+                {activeView === "contact" && "Get in Touch"}
               </span>
             </div>
 
             <button
               type="button"
-              onClick={handleCloseAbout}
+              onClick={handleClose}
               className="group flex items-center gap-2 rounded-full border border-[#fffaf0]/20 bg-[#fffaf0]/10 px-4 py-2 text-xs font-medium text-[#fffaf0] transition-all hover:bg-[#ffaf37] hover:border-[#ffaf37] hover:text-[#563e3b] active:scale-95 cursor-pointer"
             >
               <span>Close</span>
@@ -168,59 +193,177 @@ export default function DynamicIsland() {
             </button>
           </header>
 
-          {/* Editorial Content */}
-          <main className="my-auto py-10 sm:py-16">
-            <span className="inline-block text-xs uppercase tracking-[0.25em] text-[#ffaf37] font-semibold">
-              Editorial Biography
-            </span>
-
-            <h2 className="mt-3 font-[family-name:var(--font-serif)] text-3xl sm:text-5xl md:text-6xl italic leading-tight tracking-tight text-[#fffaf0]">
-              Crafting thoughtful digital interfaces and engineering scalable web systems.
-            </h2>
-
-            <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-2 text-sm sm:text-base leading-relaxed text-[#fffaf0]/80">
-              <p>
-                I'm Dheeraj, a software developer and designer passionate about creating minimal, elegant, and highly performant digital products. I combine editorial visual sensibilities with rigorous engineering principles.
-              </p>
-              <p>
-                Specializing in React, Next.js, TypeScript, and modern frontend architecture, I focus on intuitive user experiences, fluid motion, and resilient system design.
-              </p>
-            </div>
-
-            {/* Core Disciplines */}
-            <div className="mt-12 pt-8 border-t border-[#fffaf0]/15">
-              <span className="text-xs uppercase tracking-widest text-[#fffaf0]/50 font-medium">
-                Core Disciplines
+          {/* VIEW 1: ABOUT */}
+          {activeView === "about" && (
+            <main className="my-auto py-10 sm:py-16">
+              <span className="inline-block text-xs uppercase tracking-[0.25em] text-[#ffaf37] font-semibold">
+                Editorial Biography
               </span>
-              <div className="mt-4 flex flex-wrap gap-2.5">
+
+              <h2 className="mt-3 font-[family-name:var(--font-serif)] text-3xl sm:text-5xl md:text-6xl italic leading-tight tracking-tight text-[#fffaf0]">
+                Crafting thoughtful digital interfaces and engineering scalable web systems.
+              </h2>
+
+              <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-2 text-sm sm:text-base leading-relaxed text-[#fffaf0]/80">
+                <p>
+                  I'm Dheeraj, a software developer and designer passionate about creating minimal, elegant, and highly performant digital products. I combine editorial visual sensibilities with rigorous engineering principles.
+                </p>
+                <p>
+                  Specializing in React, Next.js, TypeScript, and modern frontend architecture, I focus on intuitive user experiences, fluid motion, and resilient system design.
+                </p>
+              </div>
+
+              {/* Core Disciplines */}
+              <div className="mt-12 pt-8 border-t border-[#fffaf0]/15">
+                <span className="text-xs uppercase tracking-widest text-[#fffaf0]/50 font-medium">
+                  Core Disciplines
+                </span>
+                <div className="mt-4 flex flex-wrap gap-2.5">
+                  {[
+                    "Next.js & React",
+                    "TypeScript",
+                    "Full-Stack Engineering",
+                    "Creative Interaction",
+                    "Tailwind CSS",
+                    "Performance Optimization",
+                    "Scalable Architecture",
+                  ].map((skill) => (
+                    <span
+                      key={skill}
+                      className="rounded-full border border-[#fffaf0]/15 bg-[#fffaf0]/5 px-3.5 py-1 text-xs font-medium text-[#fffaf0]/90"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </main>
+          )}
+
+          {/* VIEW 2: PROJECTS */}
+          {activeView === "projects" && (
+            <main className="my-auto py-10 sm:py-16">
+              <span className="inline-block text-xs uppercase tracking-[0.25em] text-[#ffaf37] font-semibold">
+                Portfolio Showcase
+              </span>
+
+              <h2 className="mt-3 font-[family-name:var(--font-serif)] text-3xl sm:text-5xl md:text-6xl italic leading-tight tracking-tight text-[#fffaf0]">
+                Featured Works & Systems.
+              </h2>
+
+              <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {[
-                  "Next.js & React",
-                  "TypeScript",
-                  "Full-Stack Engineering",
-                  "Creative Interaction",
-                  "Tailwind CSS",
-                  "Performance Optimization",
-                  "Scalable Architecture",
-                ].map((skill) => (
-                  <span
-                    key={skill}
-                    className="rounded-full border border-[#fffaf0]/15 bg-[#fffaf0]/5 px-3.5 py-1 text-xs font-medium text-[#fffaf0]/90"
+                  {
+                    title: "PulseFlow",
+                    category: "Collaborative Platform",
+                    description: "Real-time document editor and team workspace with WebSockets and instant synchronization.",
+                    tags: ["Next.js", "TypeScript", "Tailwind CSS"],
+                  },
+                  {
+                    title: "DevMetrics",
+                    category: "Observability Hub",
+                    description: "Developer telemetry dashboard providing latency breakdown and uptime metrics.",
+                    tags: ["React", "APIs", "Data Viz"],
+                  },
+                  {
+                    title: "StoreCraft",
+                    category: "Headless E-Commerce",
+                    description: "Ultra-fast headless digital storefront with cart persistence and Stripe checkout.",
+                    tags: ["Next.js", "Stripe", "Performance"],
+                  },
+                ].map((item, idx) => (
+                  <article
+                    key={idx}
+                    className="group flex flex-col justify-between rounded-2xl border border-[#fffaf0]/15 bg-[#fffaf0]/5 p-6 transition-all hover:bg-[#fffaf0]/10 hover:border-[#ffaf37]/40"
                   >
-                    {skill}
-                  </span>
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <FolderGit2 className="h-5 w-5 text-[#ffaf37]" />
+                        <ExternalLink className="h-4 w-4 text-[#fffaf0]/40 group-hover:text-[#ffaf37] transition-colors" />
+                      </div>
+                      <span className="mt-4 block text-[11px] font-medium tracking-wider uppercase text-[#ffaf37]">
+                        {item.category}
+                      </span>
+                      <h3 className="mt-1 text-xl font-bold text-[#fffaf0]">
+                        {item.title}
+                      </h3>
+                      <p className="mt-2 text-xs leading-relaxed text-[#fffaf0]/70">
+                        {item.description}
+                      </p>
+                    </div>
+
+                    <div className="mt-6 flex flex-wrap gap-1.5 pt-4 border-t border-[#fffaf0]/10">
+                      {item.tags.map((t) => (
+                        <span
+                          key={t}
+                          className="rounded-md bg-[#fffaf0]/10 px-2 py-0.5 text-[10px] font-medium text-[#fffaf0]/80"
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  </article>
                 ))}
               </div>
-            </div>
-          </main>
+            </main>
+          )}
 
-          {/* Footer */}
+          {/* VIEW 3: CONTACT */}
+          {activeView === "contact" && (
+            <main className="my-auto py-10 sm:py-16">
+              <span className="inline-block text-xs uppercase tracking-[0.25em] text-[#ffaf37] font-semibold">
+                Direct Communication
+              </span>
+
+              <h2 className="mt-3 font-[family-name:var(--font-serif)] text-3xl sm:text-5xl md:text-6xl italic leading-tight tracking-tight text-[#fffaf0]">
+                Let's start a conversation.
+              </h2>
+
+              <p className="mt-4 max-w-xl text-sm sm:text-base leading-relaxed text-[#fffaf0]/80">
+                Whether you have an inquiry about a prospective project, an engineering role, or simply want to say hello, feel free to connect anytime.
+              </p>
+
+              <div className="mt-8 flex flex-col sm:flex-row gap-4">
+                <a
+                  href="mailto:contact@dheeraj.dev"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#ffaf37] px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-[#563e3b] transition hover:bg-[#ffbe53] active:scale-95"
+                >
+                  <Mail className="h-4 w-4" />
+                  <span>contact@dheeraj.dev</span>
+                </a>
+
+                <div className="flex items-center gap-3">
+                  <a
+                    href="https://github.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#fffaf0]/20 bg-[#fffaf0]/5 text-[#fffaf0] transition hover:bg-[#fffaf0]/15 hover:text-[#ffaf37]"
+                    aria-label="GitHub profile"
+                  >
+                    <GithubIcon className="h-4 w-4" />
+                  </a>
+                  <a
+                    href="https://linkedin.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#fffaf0]/20 bg-[#fffaf0]/5 text-[#fffaf0] transition hover:bg-[#fffaf0]/15 hover:text-[#ffaf37]"
+                    aria-label="LinkedIn profile"
+                  >
+                    <LinkedinIcon className="h-4 w-4" />
+                  </a>
+                </div>
+              </div>
+            </main>
+          )}
+
+          {/* Footer inside Fullscreen */}
           <footer className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 border-t border-[#fffaf0]/15 text-xs text-[#fffaf0]/60">
             <span>Available for select freelance & full-time opportunities</span>
             <a
               href="mailto:contact@dheeraj.dev"
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#ffaf37] hover:underline"
             >
-              <span>Get in touch via email</span>
+              <span>contact@dheeraj.dev</span>
               <ArrowUpRight className="h-3.5 w-3.5" />
             </a>
           </footer>
