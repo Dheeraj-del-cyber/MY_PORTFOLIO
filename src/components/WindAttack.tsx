@@ -4,13 +4,33 @@ import { useEffect, useRef } from "react";
 
 interface WindStream {
   x: number;
-  yOffset: number; // Vertical offset relative to the runner crest
+  yOffset: number;
   speed: number;
   length: number;
   curve: number;
   lineWidth: number;
   baseAlpha: number;
   color: string;
+  spawnX: number;
+}
+
+interface FallingLeaf {
+  active: boolean;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  targetVx: number;
+  drag: number;
+  gravity: number;
+  liftCoeff: number;
+  size: number;
+  angle: number;
+  angularVel: number;
+  flipPhase: number;
+  flipSpeed: number;
+  color: string;
+  alpha: number;
 }
 
 export default function WindAttack() {
@@ -43,7 +63,17 @@ export default function WindAttack() {
     resize();
     window.addEventListener("resize", resize);
 
-    // Ethereal, low-opacity wind palette (Casa di Solare gold & ivory)
+    // Warm Mediterranean leaf palette (Casa di Solare terracotta, amber & golden ochre)
+    const leafPalette = [
+      "rgba(214, 142, 54, 0.90)", // Warm golden ochre
+      "rgba(196, 118, 48, 0.88)", // Terracotta copper
+      "rgba(172, 94, 42, 0.86)",  // Burnt sienna
+      "rgba(228, 168, 72, 0.92)", // Amber harvest
+      "rgba(152, 88, 38, 0.84)",  // Rich rust
+      "rgba(202, 130, 60, 0.88)", // Sun-baked clay
+    ];
+
+    // Ethereal wind palette (Casa di Solare gold & ivory)
     const windPalette = [
       "rgba(255, 175, 55, ",  // Soft citrus gold
       "rgba(255, 195, 85, ",  // Warm amber
@@ -51,22 +81,89 @@ export default function WindAttack() {
       "rgba(243, 233, 216, ", // Sand cream
     ];
 
-    // EXACTLY 7 SLEEK, MINIMAL WIND STREAMS (Coming from screen start)
+    // Tree canopy anchor:
+    // With tree at left-0 -translate-x-[55%] w-[88vw], visible foliage spans ~6% to ~22% of screen width
+    const getTreeSpawnX = () => width * 0.08 + Math.random() * (width * 0.12);
+    const getGlobeCrestY = () => height - (0.42 * 1.38 * width);
+
+    // 7 SLEEK, MINIMAL WIND STREAMS (Originating from the middle of the tree)
     const streams: WindStream[] = [
-      { x: -50, yOffset: -38, speed: 280, length: 75, curve: -2.0, lineWidth: 1.2, baseAlpha: 0.32, color: windPalette[0] },
-      { x: -140, yOffset: -22, speed: 330, length: 90, curve: 1.5, lineWidth: 1.4, baseAlpha: 0.38, color: windPalette[2] },
-      { x: -220, yOffset: -12, speed: 250, length: 65, curve: -1.2, lineWidth: 1.0, baseAlpha: 0.26, color: windPalette[1] },
-      { x: -90, yOffset: -48, speed: 310, length: 80, curve: -3.0, lineWidth: 1.1, baseAlpha: 0.28, color: windPalette[3] },
-      { x: -180, yOffset: -30, speed: 290, length: 70, curve: 2.2, lineWidth: 1.3, baseAlpha: 0.35, color: windPalette[0] },
-      { x: -30, yOffset: -5, speed: 240, length: 60, curve: 1.8, lineWidth: 0.9, baseAlpha: 0.22, color: windPalette[2] },
-      { x: -120, yOffset: -42, speed: 340, length: 85, curve: -1.5, lineWidth: 1.2, baseAlpha: 0.30, color: windPalette[1] },
+      { x: 0, spawnX: 0, yOffset: -38, speed: 280, length: 75, curve: -2.0, lineWidth: 1.2, baseAlpha: 0.32, color: windPalette[0] },
+      { x: 0, spawnX: 0, yOffset: -22, speed: 330, length: 90, curve: 1.5, lineWidth: 1.4, baseAlpha: 0.38, color: windPalette[2] },
+      { x: 0, spawnX: 0, yOffset: -12, speed: 250, length: 65, curve: -1.2, lineWidth: 1.0, baseAlpha: 0.26, color: windPalette[1] },
+      { x: 0, spawnX: 0, yOffset: -48, speed: 310, length: 80, curve: -3.0, lineWidth: 1.1, baseAlpha: 0.28, color: windPalette[3] },
+      { x: 0, spawnX: 0, yOffset: -30, speed: 290, length: 70, curve: 2.2, lineWidth: 1.3, baseAlpha: 0.35, color: windPalette[0] },
+      { x: 0, spawnX: 0, yOffset: -5, speed: 240, length: 60, curve: 1.8, lineWidth: 0.9, baseAlpha: 0.22, color: windPalette[2] },
+      { x: 0, spawnX: 0, yOffset: -42, speed: 340, length: 85, curve: -1.5, lineWidth: 1.2, baseAlpha: 0.30, color: windPalette[1] },
     ];
 
-    // Distribute initial positions across screen
+    // Initialize wind streams starting from middle of the tree canopy
     streams.forEach((s, idx) => {
-      s.x = (idx / streams.length) * (width + 100) - 50;
+      s.spawnX = getTreeSpawnX();
+      // Distribute from the tree canopy eastward across the screen on load
+      s.x = s.spawnX + (idx / streams.length) * (width - s.spawnX + 60);
     });
 
+    // Helper to initialize an active leaf from the tree canopy
+    const resetLeaf = (leaf: FallingLeaf) => {
+      const globeCrestY = getGlobeCrestY();
+      const originX = width * 0.08 + Math.random() * (width * 0.12);
+      const originY = globeCrestY - 70 + Math.random() * 55;
+
+      leaf.x = originX;
+      leaf.y = originY;
+      leaf.vx = 20 + Math.random() * 25; // Initial detachment speed
+      leaf.vy = 10 + Math.random() * 20; // Initial gentle drop
+      leaf.targetVx = 175 + Math.random() * 95; // Terminal wind carrying speed
+      leaf.drag = 2.0 + Math.random() * 0.8;
+      leaf.gravity = 30 + Math.random() * 14;
+      leaf.liftCoeff = 18 + Math.random() * 12;
+      leaf.size = 5.5 + Math.random() * 2.5;
+      leaf.angle = Math.random() * Math.PI * 2;
+      leaf.angularVel = (Math.random() - 0.5) * 3.0;
+      leaf.flipPhase = Math.random() * Math.PI * 2;
+      leaf.flipSpeed = 2.4 + Math.random() * 2.8;
+      leaf.color = leafPalette[Math.floor(Math.random() * leafPalette.length)];
+      leaf.alpha = 0.78 + Math.random() * 0.18;
+    };
+
+    // Scheduled burst-and-break cycle:
+    // Wave 1: First gust (3 leaves detach)
+    // Break 1: Calm lull (~3.6s pause, leaves drift off)
+    // Wave 2: Lesser gust (only 2 leaves detach, "lesser than first")
+    // Break 2: Calm lull (~4.5s pause before next cycle)
+    const SPAWN_SCHEDULE = [
+      { time: 0.15, spawned: false },
+      { time: 0.65, spawned: false },
+      { time: 1.15, spawned: false },
+      // Break 1: ~3.6s pause
+      { time: 4.80, spawned: false },
+      { time: 5.35, spawned: false },
+      // Break 2: ~4.5s pause
+    ];
+    const CYCLE_DURATION = 9.8; // seconds
+
+    // Compact pool of 5 leaves (only active leaves are simulated & rendered)
+    const leaves: FallingLeaf[] = Array.from({ length: 5 }, () => ({
+      active: false,
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      targetVx: 0,
+      drag: 0,
+      gravity: 0,
+      liftCoeff: 0,
+      size: 0,
+      angle: 0,
+      angularVel: 0,
+      flipPhase: 0,
+      flipSpeed: 0,
+      color: leafPalette[0],
+      alpha: 0.85,
+    }));
+
+    let cycleTime = 0.05;
     let lastTime = performance.now();
 
     const render = (now: number) => {
@@ -75,55 +172,146 @@ export default function WindAttack() {
 
       ctx.clearRect(0, 0, width, height);
 
-      // Runner anchor coordinates on mobile
-      const runnerX = width * 0.5;
-      // Globe crest height calculation:
-      // In page.tsx: globe is w-[138vw], center at bottom-0 translate-y-[58%]
-      // Top crest is at: height - (1 - 0.58) * (1.38 * width) = height - 0.5796 * width
-      const globeCrestY = height - (0.42 * 1.38 * width);
+      // Runner coordinates atop the crest (left-1/2 top-0 -translate-x-[40px])
+      const runnerX = width * 0.5 - 40;
+      const globeCrestY = getGlobeCrestY();
       const runnerCenterY = globeCrestY - 24;
 
+      // Update burst cycle timer
+      cycleTime += dt;
+      if (cycleTime >= CYCLE_DURATION) {
+        cycleTime -= CYCLE_DURATION;
+        SPAWN_SCHEDULE.forEach((s) => (s.spawned = false));
+      }
+
+      // Trigger scheduled leaf detachments
+      SPAWN_SCHEDULE.forEach((s) => {
+        if (!s.spawned && cycleTime >= s.time) {
+          s.spawned = true;
+          const available = leaves.find((l) => !l.active);
+          if (available) {
+            resetLeaf(available);
+            available.active = true;
+          }
+        }
+      });
+
+      // ----------------------------------------------------
+      // 1. WIND STREAMS (Flowing out from the middle of the tree)
+      // ----------------------------------------------------
       streams.forEach((s) => {
-        // Move from left to right (from screen start at X <= 0 across to the runner and beyond)
         s.x += s.speed * dt;
 
+        // When stream passes screen right, recycle back to middle of the tree
         if (s.x - s.length > width + 40) {
-          s.x = -s.length - Math.random() * 60; // Recycle off the far left edge of the screen
+          s.spawnX = getTreeSpawnX();
+          s.x = s.spawnX - s.length;
         }
 
         const baseY = globeCrestY + s.yOffset;
 
-        // Subtle deflection when wind passes the runner
+        // Subtle deflection when wind passes runner
         const distToRunner = Math.hypot(s.x - runnerX, baseY - runnerCenterY);
         let deflectY = 0;
         let dynamicAlpha = s.baseAlpha;
 
-        if (distToRunner < 30) {
-          // Wind curves smoothly around runner's chest and head
-          deflectY = (baseY < runnerCenterY ? -1 : 1) * (30 - distToRunner) * 0.35;
+        if (distToRunner < 32) {
+          deflectY = (baseY < runnerCenterY ? -1 : 1) * (32 - distToRunner) * 0.35;
           dynamicAlpha = Math.min(0.55, s.baseAlpha * 1.3);
         }
 
+        // Smooth fade-in as wind emerges from the tree branches
+        const emergeDist = s.x - s.spawnX;
+        if (emergeDist < 45) {
+          dynamicAlpha *= Math.max(0, emergeDist / 45);
+        }
+
+        if (dynamicAlpha > 0.01) {
+          ctx.save();
+          ctx.strokeStyle = `${s.color}${dynamicAlpha})`;
+          ctx.lineWidth = s.lineWidth;
+          ctx.lineCap = "round";
+
+          ctx.beginPath();
+          ctx.moveTo(s.x - s.length, baseY + s.curve);
+          ctx.quadraticCurveTo(
+            s.x - s.length * 0.45,
+            baseY + deflectY * 0.6,
+            s.x,
+            baseY + deflectY
+          );
+          ctx.stroke();
+
+          // Delicate luminous tip
+          ctx.fillStyle = `${s.color}${dynamicAlpha * 1.2})`;
+          ctx.beginPath();
+          ctx.arc(s.x, baseY + deflectY, s.lineWidth * 0.9, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.restore();
+        }
+      });
+
+      // ----------------------------------------------------
+      // 2. FALLING LEAVES (Aerodynamic Flutter & Wind Physics)
+      // ----------------------------------------------------
+      leaves.forEach((leaf) => {
+        if (!leaf.active) return;
+
+        // Horizontal wind drag: leaf accelerates to match the speed of the wind
+        leaf.vx += (leaf.targetVx - leaf.vx) * leaf.drag * dt;
+        leaf.x += leaf.vx * dt;
+
+        // Gravity pulls downward, while aerodynamic flutter creates periodic lift
+        leaf.flipPhase += leaf.flipSpeed * dt;
+        const lift = Math.sin(leaf.flipPhase) * leaf.liftCoeff;
+        leaf.vy += (leaf.gravity - lift) * dt;
+        // Clamp downward terminal velocity for realistic drifting
+        leaf.vy = Math.max(-10, Math.min(leaf.vy, 42));
+        leaf.y += leaf.vy * dt;
+
+        // 3D rotation and angular tumble
+        leaf.angle += leaf.angularVel * dt + Math.cos(leaf.flipPhase) * 0.015;
+
+        // Subtle slipstream deflection when flying past the runner
+        const distToRunner = Math.hypot(leaf.x - runnerX, leaf.y - runnerCenterY);
+        if (distToRunner < 36) {
+          leaf.vy -= (36 - distToRunner) * 0.7 * dt;
+        }
+
+        // Deactivate leaf once it blows past the right screen edge or bottom
+        if (leaf.x > width + 35 || leaf.y > height + 30) {
+          leaf.active = false;
+          return;
+        }
+
+        // 3D Perspective tumbling projection: leaf flips face-up and edge-on
+        const flipScale = Math.abs(Math.sin(leaf.flipPhase)) * 0.75 + 0.25;
+
         ctx.save();
-        ctx.strokeStyle = `${s.color}${dynamicAlpha})`;
-        ctx.lineWidth = s.lineWidth;
-        ctx.lineCap = "round";
+        ctx.translate(leaf.x, leaf.y);
+        ctx.rotate(leaf.angle);
+        ctx.scale(1, flipScale);
 
-        ctx.beginPath();
-        ctx.moveTo(s.x - s.length, baseY + s.curve);
-        ctx.quadraticCurveTo(
-          s.x - s.length * 0.45,
-          baseY + deflectY * 0.6,
-          s.x,
-          baseY + deflectY
-        );
-        ctx.stroke();
+        const halfL = leaf.size * 1.35;
+        const halfW = leaf.size * 0.68;
 
-        // Delicate luminous tip
-        ctx.fillStyle = `${s.color}${dynamicAlpha * 1.2})`;
+        // Organic pointed leaf body
+        ctx.fillStyle = leaf.color;
+        ctx.globalAlpha = leaf.alpha;
         ctx.beginPath();
-        ctx.arc(s.x, baseY + deflectY, s.lineWidth * 0.9, 0, Math.PI * 2);
+        ctx.moveTo(-halfL, 0);
+        ctx.bezierCurveTo(-halfL * 0.35, -halfW, halfL * 0.35, -halfW, halfL, 0);
+        ctx.bezierCurveTo(halfL * 0.35, halfW, -halfL * 0.35, halfW, -halfL, 0);
         ctx.fill();
+
+        // Subtle central midrib vein for realistic depth
+        ctx.strokeStyle = "rgba(60, 35, 15, 0.3)";
+        ctx.lineWidth = 0.55;
+        ctx.beginPath();
+        ctx.moveTo(-halfL * 0.75, 0);
+        ctx.lineTo(halfL * 0.75, 0);
+        ctx.stroke();
 
         ctx.restore();
       });

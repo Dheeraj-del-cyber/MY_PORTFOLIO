@@ -255,6 +255,19 @@ export default function Home() {
 
       {/* 7. FULL-SCREEN HORIZON WIND ATTACK (Mobile Only - Sweeping from Screen Start) */}
       <WindAttack />
+
+      {/* 8. FOREGROUND TREE (Mobile Only - Shifted further left along the edge) */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed bottom-[-4vw] left-0 -translate-x-[55%] w-[88vw] max-w-none z-17 block sm:hidden select-none"
+      >
+        <img
+          src="/homepage/tree.png"
+          alt="Foreground Tree"
+          className="w-full h-auto object-contain drop-shadow-[3px_5px_18px_rgba(40,25,20,0.2)]"
+          loading="eager"
+        />
+      </div>
     </main>
   );
 }
