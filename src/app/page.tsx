@@ -147,14 +147,41 @@ export default function Home() {
     };
   }, []);
 
-  // Click / Tap creates a fluid shockwave ripple
+  // Click / Tap creates a borderless full-screen fluid shockwave
   const handleCanvasClick = (e: React.MouseEvent) => {
-    const newRipple = { x: e.clientX, y: e.clientY, id: Date.now() };
-    setRipples((prev) => [...prev.slice(-2), newRipple]);
+    const clickX = e.clientX;
+    const clickY = e.clientY;
+    const newRipple = { x: clickX, y: clickY, id: Date.now() };
+    setRipples((prev) => [...prev.slice(-1), newRipple]);
 
     setTimeout(() => {
       setRipples((prev) => prev.filter((r) => r.id !== newRipple.id));
-    }, 800);
+    }, 1250);
+
+    // Propagate kinetic wave through letters as the fluid expands across the screen
+    const waveSpeed = 1.35; // px per ms (~1350px/sec)
+    letterBoxes.current.forEach((box, index) => {
+      const el = letterRefs.current[index];
+      if (!el || !box) return;
+      const dist = Math.hypot(clickX - box.cx, clickY - box.cy);
+      const delayMs = Math.min(dist / waveSpeed, 650);
+
+      setTimeout(() => {
+        if (!letterActive.current[index]) {
+          el.style.transition = "transform 220ms cubic-bezier(0.18, 0.9, 0.35, 1), color 220ms ease";
+          el.style.transform = "translate3d(0, -9px, 0) scale(1.08)";
+          el.style.color = "#ffaf37";
+
+          setTimeout(() => {
+            if (!letterActive.current[index]) {
+              el.style.transition = "transform 360ms cubic-bezier(0.25, 1, 0.5, 1), color 360ms ease";
+              el.style.transform = "translate3d(0, 0, 0) scale(1)";
+              el.style.color = "#563e3b";
+            }
+          }, 240);
+        }
+      }, delayMs);
+    });
   };
 
   return (
@@ -195,18 +222,19 @@ export default function Home() {
         }}
       />
 
-      {/* 3. FLUID LIQUID RIPPLES */}
+      {/* 3. BORDERLESS FULL-SCREEN FLUID WAVE (No circle lines - pure spreading fluid glow) */}
       {ripples.map((r) => (
-        <span
+        <div
           key={r.id}
-          className="pointer-events-none fixed rounded-full border border-[#ffaf37]/60 animate-ping z-20"
+          aria-hidden="true"
+          className="pointer-events-none fixed rounded-full w-[220vmax] h-[220vmax] animate-fullscreen-wave z-12 transform-gpu"
           style={{
             left: r.x,
             top: r.y,
-            width: "140px",
-            height: "140px",
-            transform: "translate(-50%, -50%)",
-            animationDuration: "800ms",
+            background:
+              "radial-gradient(circle, rgba(255, 175, 55, 0.22) 0%, rgba(255, 195, 85, 0.12) 30%, rgba(243, 233, 216, 0.05) 58%, transparent 75%)",
+            filter: "blur(36px)",
+            mixBlendMode: "multiply",
           }}
         />
       ))}

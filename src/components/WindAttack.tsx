@@ -369,17 +369,7 @@ export default function WindAttack() {
         const progress = v.age / v.maxAge;
         v.radius = 12 + (v.maxRadius - 12) * Math.sin(progress * Math.PI * 0.5);
 
-        // Delicate, ethereal swirling gold arc on canvas
-        ctx.save();
-        const vAlpha = (1 - progress) * 0.28;
-        ctx.strokeStyle = `rgba(255, 175, 55, ${vAlpha})`;
-        ctx.lineWidth = 1.1;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        const startAngle = progress * Math.PI * 3.5 * v.rotation;
-        ctx.arc(v.x, v.y, v.radius, startAngle, startAngle + Math.PI * 1.35 * v.rotation, v.rotation < 0);
-        ctx.stroke();
-        ctx.restore();
+        // Air vortex expands invisibly without any circle lines (swirls leaves physically)
       });
 
       // Pointer velocity inertia decay
