@@ -13,7 +13,7 @@ export default function ShadowRunner() {
 
     let animId: number;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const logicalW = 90;
+    const logicalW = 110;
     const logicalH = 75;
 
     canvas.width = logicalW * dpr;
@@ -86,8 +86,8 @@ export default function ShadowRunner() {
 
       ctx.clearRect(0, 0, logicalW, logicalH);
 
-      // Global reference coordinates (Runner facing LEFT)
-      const cx = 46;
+      // Global reference coordinates (Runner facing LEFT at x=40)
+      const cx = 40;
       const groundY = 68;
 
       // Pelvis vertical flight bob (2 bobs per full stride cycle)
@@ -154,6 +154,57 @@ export default function ShadowRunner() {
       // Arm 1 (Near arm, phase theta) & Arm 2 (Far arm, phase theta + PI)
       const nearArm = solveArm(theta, shoulderX, shoulderY);
       const farArm = solveArm(theta + Math.PI, shoulderX, shoulderY);
+
+      // ==============================================================
+      // LAYER 0: CAST SHADOW ON GLOBE BEHIND HIS BACK
+      // ==============================================================
+      // Low light from front-left casts an elongated dynamic shadow
+      // behind his back (+X direction) following the globe's curve
+      ctx.save();
+      const shadowGrad = ctx.createLinearGradient(cx, groundY, cx + 38, groundY + 4);
+      shadowGrad.addColorStop(0, "rgba(35, 20, 16, 0.45)");
+      shadowGrad.addColorStop(0.5, "rgba(35, 20, 16, 0.28)");
+      shadowGrad.addColorStop(0.85, "rgba(35, 20, 16, 0.12)");
+      shadowGrad.addColorStop(1, "rgba(35, 20, 16, 0)");
+
+      // Project joint onto curved globe surface behind him
+      const projectShadow = (x: number, y: number) => {
+        const height = Math.max(0, groundY - y);
+        const px = x + height * 0.76;
+        // Subtle quadratic drop as the globe curves away to the right
+        const py = groundY + Math.pow(Math.max(0, px - cx) * 0.11, 1.6);
+        return { px, py };
+      };
+
+      const sNearKnee = projectShadow(nearLeg.kneeX, nearLeg.kneeY);
+      const sNearAnkle = projectShadow(nearLeg.ankleX, nearLeg.ankleY);
+      const sFarKnee = projectShadow(farLeg.kneeX, farLeg.kneeY);
+      const sFarAnkle = projectShadow(farLeg.ankleX, farLeg.ankleY);
+      const sShoulder = projectShadow(shoulderX, shoulderY);
+      const sHead = projectShadow(shoulderX - 4.6, shoulderY - 8.8);
+
+      // Stride leg shadows trailing behind him
+      drawMuscleCapsule(cx, groundY, sNearKnee.px, sNearKnee.py, 3.0, 2.0, shadowGrad as unknown as string);
+      drawMuscleCapsule(sNearKnee.px, sNearKnee.py, sNearAnkle.px, sNearAnkle.py, 2.0, 1.3, shadowGrad as unknown as string);
+      drawMuscleCapsule(cx, groundY, sFarKnee.px, sFarKnee.py, 2.8, 1.8, shadowGrad as unknown as string);
+      drawMuscleCapsule(sFarKnee.px, sFarKnee.py, sFarAnkle.px, sFarAnkle.py, 1.8, 1.2, shadowGrad as unknown as string);
+
+      // Torso & Head cast shadow stretching behind his back
+      drawMuscleCapsule(cx, groundY, sShoulder.px, sShoulder.py, 3.8, 2.6, shadowGrad as unknown as string);
+      ctx.fillStyle = shadowGrad;
+      ctx.beginPath();
+      ctx.ellipse(sHead.px, sHead.py, 5.0, 2.2, 0.12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // ==============================================================
+      // AMBIENT BACK SHADOW ON RUNNER'S BODY (Physical Dimension)
+      // ==============================================================
+      ctx.save();
+      ctx.shadowColor = "rgba(18, 11, 10, 0.5)";
+      ctx.shadowBlur = 3.5;
+      ctx.shadowOffsetX = 1.8;
+      ctx.shadowOffsetY = 0;
 
       // ==========================================
       // LAYER 1: FAR ARM (Background)
@@ -261,6 +312,8 @@ export default function ShadowRunner() {
       ctx.arc(nearArm.fistX, nearArm.fistY, 2.5, 0, Math.PI * 2);
       ctx.fill();
 
+      ctx.restore(); // Restore from ambient back shadow
+
       animId = requestAnimationFrame(render);
     };
 
@@ -275,7 +328,7 @@ export default function ShadowRunner() {
     <div className="relative flex flex-col items-center pointer-events-none select-none">
       <canvas
         ref={canvasRef}
-        className="w-[90px] h-[75px] block pointer-events-none select-none"
+        className="w-[110px] h-[75px] block pointer-events-none select-none"
       />
     </div>
   );
