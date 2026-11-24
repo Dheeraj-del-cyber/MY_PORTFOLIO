@@ -235,12 +235,12 @@ export default function Home() {
       {/* 6. ROTATING GLOBE (Mobile Only - End-to-End Half-Dome Horizon) */}
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-screen aspect-square z-15 block sm:hidden select-none overflow-visible"
+        className="pointer-events-none fixed bottom-0 left-1/2 -translate-x-1/2 translate-y-[58%] w-[138vw] max-w-none aspect-square z-15 block sm:hidden select-none overflow-visible"
       >
         <img
           src="/homepage/globe.png"
           alt="Rotating Globe"
-          className="w-full h-full object-contain animate-globe-rotate drop-shadow-[0_-8px_30px_rgba(86,62,59,0.2)]"
+          className="w-full h-full max-w-none object-contain animate-globe-rotate drop-shadow-[0_-8px_30px_rgba(86,62,59,0.2)]"
           loading="eager"
         />
       </div>
