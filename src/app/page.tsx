@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import DynamicIsland from "@/components/DynamicIsland";
+import ShadowRunner from "@/components/ShadowRunner";
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
@@ -232,17 +233,23 @@ export default function Home() {
         </h1>
       </div>
 
-      {/* 6. ROTATING GLOBE (Mobile Only - End-to-End Half-Dome Horizon) */}
+      {/* 6. ROTATING GLOBE & SHADOW RUNNER (Mobile Only - Running Upon the Globe) */}
       <div
         aria-hidden="true"
         className="pointer-events-none fixed bottom-0 left-1/2 -translate-x-1/2 translate-y-[58%] w-[138vw] max-w-none aspect-square z-15 block sm:hidden select-none overflow-visible"
       >
+        {/* The Rotating Globe Image */}
         <img
           src="/homepage/globe.png"
           alt="Rotating Globe"
           className="w-full h-full max-w-none object-contain animate-globe-rotate drop-shadow-[0_-8px_30px_rgba(86,62,59,0.2)]"
           loading="eager"
         />
+
+        {/* The Black Shadow Runner (Running atop the crest of the globe facing left against the rotation) */}
+        <div className="absolute left-1/2 top-[7.5%] -translate-x-1/2 -translate-y-[90%] z-20 flex flex-col items-center">
+          <ShadowRunner />
+        </div>
       </div>
     </main>
   );
