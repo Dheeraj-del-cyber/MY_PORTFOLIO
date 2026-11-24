@@ -99,16 +99,6 @@ export default function ShadowRunner() {
       const nearColor = "#140d0c";
       const farColor = "#362420";
 
-      // 1. GROUND CONTACT SHADOW ON GLOBE CREST
-      const shadowScale = 1 - Math.max(0, flightBob) * 0.32;
-      const shadowAlpha = 0.45 - Math.max(0, flightBob) * 0.22;
-      ctx.save();
-      ctx.fillStyle = `rgba(50, 32, 28, ${shadowAlpha})`;
-      ctx.beginPath();
-      ctx.ellipse(cx - 2, groundY, 13 * shadowScale, 2.5 * shadowScale, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
       // Kinematics solver for legs (facing left: forward is -X, backward is +X)
       const solveLeg = (phase: number) => {
         const thighLength = 14;
