@@ -82,11 +82,11 @@ export default function WindAttack() {
     ];
 
     // Tree canopy anchor:
-    // With tree at left-0 -translate-x-[55%] w-[88vw], visible foliage spans ~6% to ~22% of screen width
-    const getTreeSpawnX = () => width * 0.08 + Math.random() * (width * 0.12);
+    // With tree at left-0 -translate-x-[55%] w-[88vw], the visible center of the tree is at ~16% to ~24% of screen width
+    const getTreeSpawnX = () => width * 0.16 + Math.random() * (width * 0.08);
     const getGlobeCrestY = () => height - (0.42 * 1.38 * width);
 
-    // 7 SLEEK, MINIMAL WIND STREAMS (Originating from the middle of the tree)
+    // 7 SLEEK, MINIMAL WIND STREAMS (Originating strictly from the center of the tree with gradient fade)
     const streams: WindStream[] = [
       { x: 0, spawnX: 0, yOffset: -38, speed: 280, length: 75, curve: -2.0, lineWidth: 1.2, baseAlpha: 0.32, color: windPalette[0] },
       { x: 0, spawnX: 0, yOffset: -22, speed: 330, length: 90, curve: 1.5, lineWidth: 1.4, baseAlpha: 0.38, color: windPalette[2] },
@@ -97,17 +97,17 @@ export default function WindAttack() {
       { x: 0, spawnX: 0, yOffset: -42, speed: 340, length: 85, curve: -1.5, lineWidth: 1.2, baseAlpha: 0.30, color: windPalette[1] },
     ];
 
-    // Initialize wind streams starting from middle of the tree canopy
+    // Initialize wind streams starting strictly from the center of the tree
     streams.forEach((s, idx) => {
       s.spawnX = getTreeSpawnX();
-      // Distribute from the tree canopy eastward across the screen on load
-      s.x = s.spawnX + (idx / streams.length) * (width - s.spawnX + 60);
+      // Distribute from the center of the tree eastward across the screen on load
+      s.x = s.spawnX + (idx / streams.length) * (width - s.spawnX + 30);
     });
 
     // Helper to initialize an active leaf from the tree canopy
     const resetLeaf = (leaf: FallingLeaf) => {
       const globeCrestY = getGlobeCrestY();
-      const originX = width * 0.08 + Math.random() * (width * 0.12);
+      const originX = width * 0.14 + Math.random() * (width * 0.10);
       const originY = globeCrestY - 70 + Math.random() * 55;
 
       leaf.x = originX;
@@ -197,16 +197,23 @@ export default function WindAttack() {
       });
 
       // ----------------------------------------------------
-      // 1. WIND STREAMS (Flowing out from the middle of the tree)
+      // 1. WIND STREAMS (Originating strictly from the center of the tree with gradient fade)
       // ----------------------------------------------------
       streams.forEach((s) => {
         s.x += s.speed * dt;
 
-        // When stream passes screen right, recycle back to middle of the tree
+        // When stream passes screen right, recycle back to the center of the tree
         if (s.x - s.length > width + 40) {
           s.spawnX = getTreeSpawnX();
-          s.x = s.spawnX - s.length;
+          s.x = s.spawnX; // Start strictly at the center of the tree (never off the left screen)
         }
+
+        // Never draw anything before or to the left of the tree center
+        if (s.x <= s.spawnX + 3) return;
+
+        const tailX = Math.max(s.spawnX, s.x - s.length);
+        const currentLen = s.x - tailX;
+        if (currentLen < 4) return;
 
         const baseY = globeCrestY + s.yOffset;
 
@@ -220,22 +227,29 @@ export default function WindAttack() {
           dynamicAlpha = Math.min(0.55, s.baseAlpha * 1.3);
         }
 
-        // Smooth fade-in as wind emerges from the tree branches
+        // Smooth distance fade as the stream emerges from the center of the tree
         const emergeDist = s.x - s.spawnX;
-        if (emergeDist < 45) {
-          dynamicAlpha *= Math.max(0, emergeDist / 45);
+        if (emergeDist < 60) {
+          dynamicAlpha *= Math.max(0, emergeDist / 60);
         }
 
         if (dynamicAlpha > 0.01) {
           ctx.save();
-          ctx.strokeStyle = `${s.color}${dynamicAlpha})`;
+
+          // Realistic gradient fade: 0 opacity at the tail, ramping smoothly to the head
+          const grad = ctx.createLinearGradient(tailX, baseY, s.x, baseY);
+          grad.addColorStop(0, `${s.color}0)`); // 0 opacity at tail - seamless fade!
+          grad.addColorStop(0.55, `${s.color}${dynamicAlpha * 0.75})`);
+          grad.addColorStop(1, `${s.color}${dynamicAlpha})`);
+
+          ctx.strokeStyle = grad;
           ctx.lineWidth = s.lineWidth;
           ctx.lineCap = "round";
 
           ctx.beginPath();
-          ctx.moveTo(s.x - s.length, baseY + s.curve);
+          ctx.moveTo(tailX, baseY + s.curve * (currentLen / s.length));
           ctx.quadraticCurveTo(
-            s.x - s.length * 0.45,
+            tailX + currentLen * 0.55,
             baseY + deflectY * 0.6,
             s.x,
             baseY + deflectY
@@ -243,9 +257,9 @@ export default function WindAttack() {
           ctx.stroke();
 
           // Delicate luminous tip
-          ctx.fillStyle = `${s.color}${dynamicAlpha * 1.2})`;
+          ctx.fillStyle = `${s.color}${dynamicAlpha * 1.15})`;
           ctx.beginPath();
-          ctx.arc(s.x, baseY + deflectY, s.lineWidth * 0.9, 0, Math.PI * 2);
+          ctx.arc(s.x, baseY + deflectY, s.lineWidth * 0.85, 0, Math.PI * 2);
           ctx.fill();
 
           ctx.restore();
