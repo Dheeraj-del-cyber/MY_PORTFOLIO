@@ -127,6 +127,95 @@ export default function WindAttack() {
       leaf.alpha = 0.78 + Math.random() * 0.18;
     };
 
+    // ----------------------------------------------------
+    // INTERACTIVE AIR DRAFT & VORTEX SYSTEM
+    // ----------------------------------------------------
+    const pointer = {
+      x: -1000,
+      y: -1000,
+      prevX: -1000,
+      prevY: -1000,
+      vx: 0,
+      vy: 0,
+      isActive: false,
+      lastActiveTime: 0,
+    };
+
+    interface Vortex {
+      x: number;
+      y: number;
+      radius: number;
+      maxRadius: number;
+      strength: number;
+      rotation: number;
+      age: number;
+      maxAge: number;
+      active: boolean;
+    }
+
+    const vortices: Vortex[] = [
+      { x: 0, y: 0, radius: 0, maxRadius: 135, strength: 380, rotation: 1, age: 0, maxAge: 0.75, active: false },
+      { x: 0, y: 0, radius: 0, maxRadius: 135, strength: 380, rotation: -1, age: 0, maxAge: 0.75, active: false },
+      { x: 0, y: 0, radius: 0, maxRadius: 135, strength: 380, rotation: 1, age: 0, maxAge: 0.75, active: false },
+    ];
+
+    const triggerVortex = (cx: number, cy: number) => {
+      const v = vortices.find((item) => !item.active) || vortices[0];
+      v.x = cx;
+      v.y = cy;
+      v.radius = 8;
+      v.strength = 420;
+      v.rotation = Math.random() > 0.5 ? 1 : -1;
+      v.age = 0;
+      v.maxAge = 0.75;
+      v.active = true;
+    };
+
+    const handlePointerMove = (e: PointerEvent | MouseEvent) => {
+      pointer.prevX = pointer.x;
+      pointer.prevY = pointer.y;
+      pointer.x = e.clientX;
+      pointer.y = e.clientY;
+      pointer.vx = (pointer.x - pointer.prevX) * 20;
+      pointer.vy = (pointer.y - pointer.prevY) * 20;
+      pointer.isActive = true;
+      pointer.lastActiveTime = performance.now();
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        const t = e.touches[0];
+        pointer.prevX = pointer.x;
+        pointer.prevY = pointer.y;
+        pointer.x = t.clientX;
+        pointer.y = t.clientY;
+        pointer.vx = (pointer.x - pointer.prevX) * 25;
+        pointer.vy = (pointer.y - pointer.prevY) * 25;
+        pointer.isActive = true;
+        pointer.lastActiveTime = performance.now();
+      }
+    };
+
+    const handleTap = (e: MouseEvent | TouchEvent) => {
+      let tx = 0;
+      let ty = 0;
+      if ("touches" in e && e.touches.length > 0) {
+        tx = e.touches[0].clientX;
+        ty = e.touches[0].clientY;
+      } else if ("clientX" in e) {
+        tx = e.clientX;
+        ty = e.clientY;
+      } else {
+        return;
+      }
+      triggerVortex(tx, ty);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove, { passive: true });
+    window.addEventListener("touchmove", handleTouchMove, { passive: true });
+    window.addEventListener("pointerdown", handleTap, { passive: true });
+    window.addEventListener("touchstart", handleTap, { passive: true });
+
     // Scheduled burst-and-break cycle:
     // Wave 1: First gust (3 leaves detach)
     // Break 1: Calm lull (~3.6s pause, leaves drift off)
@@ -267,12 +356,100 @@ export default function WindAttack() {
       });
 
       // ----------------------------------------------------
-      // 2. FALLING LEAVES (Aerodynamic Flutter & Wind Physics)
+      // 2. ACTIVE AIR VORTICES (Swirling Wind Current from Taps)
+      // ----------------------------------------------------
+      vortices.forEach((v) => {
+        if (!v.active) return;
+        v.age += dt;
+        if (v.age >= v.maxAge) {
+          v.active = false;
+          return;
+        }
+
+        const progress = v.age / v.maxAge;
+        v.radius = 12 + (v.maxRadius - 12) * Math.sin(progress * Math.PI * 0.5);
+
+        // Delicate, ethereal swirling gold arc on canvas
+        ctx.save();
+        const vAlpha = (1 - progress) * 0.28;
+        ctx.strokeStyle = `rgba(255, 175, 55, ${vAlpha})`;
+        ctx.lineWidth = 1.1;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        const startAngle = progress * Math.PI * 3.5 * v.rotation;
+        ctx.arc(v.x, v.y, v.radius, startAngle, startAngle + Math.PI * 1.35 * v.rotation, v.rotation < 0);
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      // Pointer velocity inertia decay
+      if (now - pointer.lastActiveTime > 110) {
+        pointer.isActive = false;
+        pointer.vx *= 0.8;
+        pointer.vy *= 0.8;
+      }
+
+      // ----------------------------------------------------
+      // 3. FALLING LEAVES (Aerodynamic Flutter & Touch Interactions)
       // ----------------------------------------------------
       leaves.forEach((leaf) => {
         if (!leaf.active) return;
 
-        // Horizontal wind drag: leaf accelerates to match the speed of the wind
+        // A. Interactive Air Turbulence (Brushing finger/cursor past leaf)
+        if (pointer.isActive) {
+          const pdx = leaf.x - pointer.x;
+          const pdy = leaf.y - pointer.y;
+          const pdist = Math.hypot(pdx, pdy);
+          const reach = 85;
+
+          if (pdist < reach && pdist > 1) {
+            const factor = Math.pow(1 - pdist / reach, 1.4);
+            const nx = pdx / pdist;
+            const ny = pdy / pdist;
+
+            // Direct aerodynamic push away from finger + hand draft wake
+            const pushForce = 360 * factor;
+            leaf.vx += (nx * pushForce + pointer.vx * 0.45 * factor) * dt;
+            leaf.vy += (ny * pushForce + pointer.vy * 0.45 * factor) * dt;
+
+            // Rapid spin on its axis and high-speed 3D tumble when brushed!
+            const spinDir = pointer.vx >= 0 ? 1 : -1;
+            leaf.angularVel += spinDir * (18 + Math.abs(pointer.vx) * 0.05) * factor * dt * 60;
+            leaf.flipSpeed = Math.min(22, leaf.flipSpeed + 12 * factor);
+          }
+        }
+
+        // B. Wind Vortex Attraction & Swirl (Triggered by Tapping)
+        vortices.forEach((v) => {
+          if (!v.active) return;
+          const vdx = leaf.x - v.x;
+          const vdy = leaf.y - v.y;
+          const vdist = Math.hypot(vdx, vdy);
+          const vReach = v.radius + 60;
+
+          if (vdist < vReach && vdist > 2) {
+            const vFactor = Math.max(0, 1 - vdist / vReach);
+            const currentStrength = v.strength * (1 - v.age / v.maxAge) * vFactor;
+
+            // Tangential vector (perpendicular to radial vector) -> produces the circular swirl!
+            const tx = (-vdy / vdist) * v.rotation;
+            const ty = (vdx / vdist) * v.rotation;
+
+            // Gentle inward suction near core, slight outward fling near perimeter
+            const radialPull = vdist < v.radius * 0.55 ? -0.4 : 0.45;
+            const rx = (vdx / vdist) * radialPull;
+            const ry = (vdy / vdist) * radialPull;
+
+            leaf.vx += (tx * 1.2 + rx) * currentStrength * dt;
+            leaf.vy += (ty * 1.2 + ry) * currentStrength * dt;
+
+            // Spin the leaf along with the vortex
+            leaf.angularVel += v.rotation * 16 * vFactor * dt * 60;
+            leaf.flipSpeed = Math.min(20, leaf.flipSpeed + 9 * vFactor);
+          }
+        });
+
+        // Horizontal wind drag: smoothly recovers eastward speed toward the wind
         leaf.vx += (leaf.targetVx - leaf.vx) * leaf.drag * dt;
         leaf.x += leaf.vx * dt;
 
@@ -281,8 +458,12 @@ export default function WindAttack() {
         const lift = Math.sin(leaf.flipPhase) * leaf.liftCoeff;
         leaf.vy += (leaf.gravity - lift) * dt;
         // Clamp downward terminal velocity for realistic drifting
-        leaf.vy = Math.max(-10, Math.min(leaf.vy, 42));
+        leaf.vy = Math.max(-14, Math.min(leaf.vy, 46));
         leaf.y += leaf.vy * dt;
+
+        // Damping angular velocity and flip speed back to natural calm cruising rates
+        leaf.angularVel *= Math.pow(0.91, dt * 60);
+        leaf.flipSpeed = leaf.flipSpeed * 0.94 + 2.5 * 0.06;
 
         // 3D rotation and angular tumble
         leaf.angle += leaf.angularVel * dt + Math.cos(leaf.flipPhase) * 0.015;
@@ -338,6 +519,10 @@ export default function WindAttack() {
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener("resize", resize);
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("pointerdown", handleTap);
+      window.removeEventListener("touchstart", handleTap);
     };
   }, []);
 
