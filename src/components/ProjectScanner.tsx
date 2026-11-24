@@ -128,10 +128,31 @@ export default function ProjectScanner() {
     const cardLineWidth = (cardWidth + cardGap) * displayList.length;
     const halfWidth = cardLineWidth / 2;
 
+    interface CardNode {
+      wrapper: HTMLDivElement;
+      normalCard: HTMLDivElement;
+      asciiCard: HTMLDivElement;
+    }
+
+    let cardNodes: CardNode[] = [];
+    const refreshCardNodes = () => {
+      cardNodes = [];
+      const wrappers = cardLine.querySelectorAll<HTMLDivElement>(".scanner-card-wrapper");
+      wrappers.forEach((wrapper) => {
+        const normalCard = wrapper.querySelector<HTMLDivElement>(".card-normal-layer");
+        const asciiCard = wrapper.querySelector<HTMLDivElement>(".card-ascii-layer");
+        if (normalCard && asciiCard) {
+          cardNodes.push({ wrapper, normalCard, asciiCard });
+        }
+      });
+    };
+    refreshCardNodes();
+
     const handleResize = () => {
       containerWidth = container.offsetWidth;
+      refreshCardNodes();
     };
-    window.addEventListener("resize", handleResize);
+    window.addEventListener("resize", handleResize, { passive: true });
 
     // Mouse & Touch drag handlers
     const onMouseDown = (e: MouseEvent | Touch) => {
@@ -211,14 +232,14 @@ export default function ProjectScanner() {
       // 1. Move conveyor
       cardLine.style.transform = `translate3d(${posRef.current}px, 0, 0)`;
 
-      // 2. Synchronized 3D Circular Orbit + Laser Line Split
+      // 2. Synchronized 3D Circular Orbit + Laser Line Split (Cached Elements - Zero Per-Frame DOM Queries)
       const scannerX = containerWidth / 2;
       const radius = Math.max(containerWidth * 0.75, 550);
-      const wrappers = cardLine.querySelectorAll<HTMLDivElement>(".scanner-card-wrapper");
+      const containerRect = container.getBoundingClientRect();
 
-      wrappers.forEach((wrapper) => {
+      for (let i = 0; i < cardNodes.length; i++) {
+        const { wrapper, normalCard, asciiCard } = cardNodes[i];
         const rect = wrapper.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
 
         const cardCenterX = rect.left + rect.width / 2;
         const distFromCenter = cardCenterX - (containerRect.left + containerWidth / 2);
@@ -234,16 +255,12 @@ export default function ProjectScanner() {
         wrapper.style.transform = `translate3d(0, ${arcY.toFixed(1)}px, ${translateZ.toFixed(1)}px) rotateY(${rotY.toFixed(2)}deg) scale(${scale.toFixed(3)})`;
 
         // Laser scan sub-pixel clipping:
-        const normalCard = wrapper.querySelector<HTMLDivElement>(".card-normal-layer");
-        const asciiCard = wrapper.querySelector<HTMLDivElement>(".card-ascii-layer");
-        if (!normalCard || !asciiCard) return;
-
         const offsetFromLeft = (containerRect.left + scannerX) - rect.left;
         const splitPercent = Math.max(0, Math.min(100, (offsetFromLeft / rect.width) * 100));
 
         normalCard.style.clipPath = `inset(0 0 0 ${splitPercent}%)`;
         asciiCard.style.clipPath = `inset(0 ${100 - splitPercent}% 0 0)`;
-      });
+      }
 
       animId = requestAnimationFrame(animateLoop);
     };

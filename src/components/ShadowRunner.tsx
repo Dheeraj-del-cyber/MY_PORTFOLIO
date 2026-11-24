@@ -6,6 +6,9 @@ export default function ShadowRunner() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
+    // Only run the mobile canvas animation loop on mobile screens (<640px)
+    if (window.innerWidth >= 640) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");

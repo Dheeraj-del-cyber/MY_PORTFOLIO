@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, ArrowUpRight, Sparkles, FolderGit2, Mail, ExternalLink } from "lucide-react";
+import { X, ArrowUpRight, Sparkles, Mail } from "lucide-react";
 import { GithubIcon, LinkedinIcon } from "@/components/Icons";
 import ProjectScanner from "@/components/ProjectScanner";
 

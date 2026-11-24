@@ -17,6 +17,9 @@ export default function WindAttack() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
+    // Only run mobile wind animation loop on mobile screens (<640px)
+    if (window.innerWidth >= 640) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
