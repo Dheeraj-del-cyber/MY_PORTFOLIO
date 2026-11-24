@@ -247,7 +247,7 @@ export default function Home() {
         />
 
         {/* The Black Shadow Runner (Running atop the crest of the globe facing left against the rotation) */}
-        <div className="absolute left-1/2 top-[7.5%] -translate-x-1/2 -translate-y-[90%] z-20 flex flex-col items-center">
+        <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-[89%] z-20 flex flex-col items-center">
           <ShadowRunner />
         </div>
       </div>

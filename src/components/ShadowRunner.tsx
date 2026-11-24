@@ -92,7 +92,7 @@ export default function ShadowRunner() {
 
       // Pelvis vertical flight bob (2 bobs per full stride cycle)
       const flightBob = Math.sin(theta * 2);
-      const hipY = groundY - 33 - Math.max(0, flightBob) * 3.8;
+      const hipY = groundY - 30.5 - Math.max(0, flightBob) * 2.2;
       const hipX = cx;
 
       // Colors: Foreground Obsidian Black & Background Depth Charcoal
@@ -101,24 +101,24 @@ export default function ShadowRunner() {
 
       // Kinematics solver for legs (facing left: forward is -X, backward is +X)
       const solveLeg = (phase: number) => {
-        const thighLength = 14;
-        const shinLength = 14.5;
+        const thighLength = 15;
+        const shinLength = 15;
 
         // Thigh swing: swings forward (-X) when phase > 0, back (+X) when phase < 0
-        const thighAngle = -Math.sin(phase) * 0.62;
+        const thighAngle = -Math.sin(phase) * 0.58;
         const kneeX = hipX + Math.sin(thighAngle) * thighLength;
         const kneeY = hipY + Math.cos(thighAngle) * thighLength;
 
         // Knee flexion: bends backward (+X, heel up) during recovery swing
-        const recoveryKick = Math.max(0, Math.cos(phase)) * 1.15;
-        const pushStraight = Math.max(0, -Math.sin(phase)) * 0.25;
-        const kneeFlexion = thighAngle + 0.18 + recoveryKick - pushStraight;
+        const recoveryKick = Math.max(0, Math.cos(phase)) * 1.1;
+        const pushStraight = Math.max(0, -Math.sin(phase)) * 0.22;
+        const kneeFlexion = thighAngle + 0.15 + recoveryKick - pushStraight;
 
         const ankleX = kneeX + Math.sin(kneeFlexion) * shinLength;
         const ankleY = kneeY + Math.cos(kneeFlexion) * shinLength;
 
         // Ankle toe angle
-        const toeAngle = Math.PI - 0.25 - (recoveryKick * 0.5);
+        const toeAngle = Math.PI - 0.22 - (recoveryKick * 0.45);
 
         return { kneeX, kneeY, ankleX, ankleY, toeAngle };
       };
