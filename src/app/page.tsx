@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import DynamicIsland from "@/components/DynamicIsland";
 import ShadowRunner from "@/components/ShadowRunner";
+import WindAttack from "@/components/WindAttack";
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
@@ -246,11 +247,14 @@ export default function Home() {
           loading="eager"
         />
 
-        {/* The Black Shadow Runner (Running atop the crest of the globe facing left against the rotation) */}
+        {/* The Black Shadow Runner (Running atop the crest facing left against the rotation) */}
         <div className="absolute left-1/2 top-0 -translate-x-[40px] -translate-y-[89%] z-20 flex flex-col items-center">
           <ShadowRunner />
         </div>
       </div>
+
+      {/* 7. FULL-SCREEN HORIZON WIND ATTACK (Mobile Only - Sweeping from Screen Start) */}
+      <WindAttack />
     </main>
   );
 }

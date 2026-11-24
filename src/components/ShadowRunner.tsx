@@ -59,7 +59,6 @@ export default function ShadowRunner() {
       const upX = -forwardY;
       const upY = forwardX;
 
-      // Ankle -> Toe -> Sole -> Heel
       const heelX = ax - forwardX * 2.5 + upX * 1;
       const heelY = ay - forwardY * 2.5 + upY * 1;
       const toeX = ax + forwardX * 7.5;
@@ -81,12 +80,12 @@ export default function ShadowRunner() {
 
     const render = (now: number) => {
       const elapsed = (now - startTime) / 1000;
-      const cycleTime = 0.65; // High-cadence athletic running pace (~185 steps/min)
+      const cycleTime = 0.65; // Athletic cadence (~185 steps/min)
       const theta = ((elapsed % cycleTime) / cycleTime) * Math.PI * 2;
 
       ctx.clearRect(0, 0, logicalW, logicalH);
 
-      // Global reference coordinates (Runner facing LEFT at x=40)
+      // Global reference coordinates (Runner facing LEFT at cx=40)
       const cx = 40;
       const groundY = 68;
 
@@ -99,41 +98,35 @@ export default function ShadowRunner() {
       const nearColor = "#140d0c";
       const farColor = "#362420";
 
-      // Kinematics solver for legs (facing left: forward is -X, backward is +X)
+      // Kinematics solver for legs
       const solveLeg = (phase: number) => {
         const thighLength = 15;
         const shinLength = 15;
 
-        // Thigh swing: swings forward (-X) when phase > 0, back (+X) when phase < 0
         const thighAngle = -Math.sin(phase) * 0.58;
         const kneeX = hipX + Math.sin(thighAngle) * thighLength;
         const kneeY = hipY + Math.cos(thighAngle) * thighLength;
 
-        // Knee flexion: bends backward (+X, heel up) during recovery swing
         const recoveryKick = Math.max(0, Math.cos(phase)) * 1.1;
         const pushStraight = Math.max(0, -Math.sin(phase)) * 0.22;
         const kneeFlexion = thighAngle + 0.15 + recoveryKick - pushStraight;
 
         const ankleX = kneeX + Math.sin(kneeFlexion) * shinLength;
         const ankleY = kneeY + Math.cos(kneeFlexion) * shinLength;
-
-        // Ankle toe angle
-        const toeAngle = Math.PI - 0.22 - (recoveryKick * 0.45);
+        const toeAngle = Math.PI - 0.22 - recoveryKick * 0.45;
 
         return { kneeX, kneeY, ankleX, ankleY, toeAngle };
       };
 
-      // Kinematics solver for arms (opposite phase to legs)
+      // Kinematics solver for arms
       const solveArm = (phase: number, shoulderX: number, shoulderY: number) => {
         const upperLength = 10.5;
         const foreLength = 10;
 
-        // Arm pumps opposite to leg: forward (-X) when leg is back
         const upperAngle = Math.sin(phase) * 0.55 - 0.15;
         const elbowX = shoulderX + Math.sin(upperAngle) * upperLength;
         const elbowY = shoulderY + Math.cos(upperAngle) * upperLength;
 
-        // Forearm bent forward at roughly 80°
         const foreAngle = upperAngle - 1.35;
         const fistX = elbowX + Math.sin(foreAngle) * foreLength;
         const fistY = elbowY + Math.cos(foreAngle) * foreLength;
@@ -141,25 +134,20 @@ export default function ShadowRunner() {
         return { elbowX, elbowY, fistX, fistY };
       };
 
-      // Torso & Shoulder calculations (Athletic forward lean of 15° facing left)
+      // Torso & Shoulder calculations (Athletic forward lean of 16° facing left into the storm)
       const torsoLength = 16.5;
-      const spineAngle = -0.26 + flightBob * 0.03; // ~15 degrees forward lean
+      const spineAngle = -0.28 + flightBob * 0.03;
       const shoulderX = hipX + Math.sin(spineAngle) * torsoLength;
       const shoulderY = hipY - Math.cos(spineAngle) * torsoLength;
 
-      // Leg 1 (Near leg, phase theta) & Leg 2 (Far leg, phase theta + PI)
       const nearLeg = solveLeg(theta);
       const farLeg = solveLeg(theta + Math.PI);
-
-      // Arm 1 (Near arm, phase theta) & Arm 2 (Far arm, phase theta + PI)
       const nearArm = solveArm(theta, shoulderX, shoulderY);
       const farArm = solveArm(theta + Math.PI, shoulderX, shoulderY);
 
       // ==============================================================
       // LAYER 0: CAST SHADOW ON GLOBE BEHIND HIS BACK
       // ==============================================================
-      // Low light from front-left casts an elongated dynamic shadow
-      // behind his back (+X direction) following the globe's curve
       ctx.save();
       const shadowGrad = ctx.createLinearGradient(cx, groundY, cx + 38, groundY + 4);
       shadowGrad.addColorStop(0, "rgba(35, 20, 16, 0.45)");
@@ -167,11 +155,9 @@ export default function ShadowRunner() {
       shadowGrad.addColorStop(0.85, "rgba(35, 20, 16, 0.12)");
       shadowGrad.addColorStop(1, "rgba(35, 20, 16, 0)");
 
-      // Project joint onto curved globe surface behind him
       const projectShadow = (x: number, y: number) => {
         const height = Math.max(0, groundY - y);
         const px = x + height * 0.76;
-        // Subtle quadratic drop as the globe curves away to the right
         const py = groundY + Math.pow(Math.max(0, px - cx) * 0.11, 1.6);
         return { px, py };
       };
@@ -183,13 +169,11 @@ export default function ShadowRunner() {
       const sShoulder = projectShadow(shoulderX, shoulderY);
       const sHead = projectShadow(shoulderX - 4.6, shoulderY - 8.8);
 
-      // Stride leg shadows trailing behind him
       drawMuscleCapsule(cx, groundY, sNearKnee.px, sNearKnee.py, 3.0, 2.0, shadowGrad as unknown as string);
       drawMuscleCapsule(sNearKnee.px, sNearKnee.py, sNearAnkle.px, sNearAnkle.py, 2.0, 1.3, shadowGrad as unknown as string);
       drawMuscleCapsule(cx, groundY, sFarKnee.px, sFarKnee.py, 2.8, 1.8, shadowGrad as unknown as string);
       drawMuscleCapsule(sFarKnee.px, sFarKnee.py, sFarAnkle.px, sFarAnkle.py, 1.8, 1.2, shadowGrad as unknown as string);
 
-      // Torso & Head cast shadow stretching behind his back
       drawMuscleCapsule(cx, groundY, sShoulder.px, sShoulder.py, 3.8, 2.6, shadowGrad as unknown as string);
       ctx.fillStyle = shadowGrad;
       ctx.beginPath();
@@ -198,7 +182,7 @@ export default function ShadowRunner() {
       ctx.restore();
 
       // ==============================================================
-      // AMBIENT BACK SHADOW ON RUNNER'S BODY (Physical Dimension)
+      // AMBIENT BACK SHADOW ON RUNNER'S BODY
       // ==============================================================
       ctx.save();
       ctx.shadowColor = "rgba(18, 11, 10, 0.5)";
@@ -206,9 +190,7 @@ export default function ShadowRunner() {
       ctx.shadowOffsetX = 1.8;
       ctx.shadowOffsetY = 0;
 
-      // ==========================================
-      // LAYER 1: FAR ARM (Background)
-      // ==========================================
+      // FAR ARM
       drawMuscleCapsule(shoulderX, shoulderY, farArm.elbowX, farArm.elbowY, 3.2, 2.4, farColor);
       drawMuscleCapsule(farArm.elbowX, farArm.elbowY, farArm.fistX, farArm.fistY, 2.4, 2.0, farColor);
       ctx.fillStyle = farColor;
@@ -216,23 +198,15 @@ export default function ShadowRunner() {
       ctx.arc(farArm.fistX, farArm.fistY, 2.2, 0, Math.PI * 2);
       ctx.fill();
 
-      // ==========================================
-      // LAYER 2: FAR LEG (Background)
-      // ==========================================
-      // Far Thigh (tapered from hip to knee)
+      // FAR LEG
       drawMuscleCapsule(hipX, hipY, farLeg.kneeX, farLeg.kneeY, 4.4, 3.0, farColor);
-      // Far Calf & Shin (muscular bulge at mid-calf)
       const farMidCalfX = farLeg.kneeX + (farLeg.ankleX - farLeg.kneeX) * 0.45;
       const farMidCalfY = farLeg.kneeY + (farLeg.ankleY - farLeg.kneeY) * 0.45;
       drawMuscleCapsule(farLeg.kneeX, farLeg.kneeY, farMidCalfX, farMidCalfY, 3.0, 3.7, farColor);
       drawMuscleCapsule(farMidCalfX, farMidCalfY, farLeg.ankleX, farLeg.ankleY, 3.7, 2.2, farColor);
-      // Far Running Shoe
       drawRunningShoe(farLeg.ankleX, farLeg.ankleY, farLeg.toeAngle, farColor);
 
-      // ==========================================
-      // LAYER 3: TORSO & CHEST
-      // ==========================================
-      // Contoured athletic torso
+      // TORSO & CHEST
       ctx.fillStyle = nearColor;
       ctx.beginPath();
       ctx.moveTo(shoulderX - 4.2, shoulderY);
@@ -241,28 +215,22 @@ export default function ShadowRunner() {
       ctx.lineTo(hipX - 3.8, hipY);
       ctx.closePath();
       ctx.fill();
-      // Rounded chest contour
       ctx.beginPath();
       ctx.arc(shoulderX, shoulderY, 4.2, 0, Math.PI * 2);
       ctx.arc(hipX, hipY, 3.8, 0, Math.PI * 2);
       ctx.fill();
 
-      // ==========================================
-      // LAYER 4: HEAD, NECK & STREAMING HAIR
-      // ==========================================
+      // HEAD & NECK
       const headCenterX = shoulderX - 4.6;
       const headCenterY = shoulderY - 8.8;
-
-      // Neck
       drawMuscleCapsule(shoulderX - 1.5, shoulderY - 2, headCenterX + 1.2, headCenterY + 2.5, 2.8, 2.4, nearColor);
 
-      // Head silhouette (oval with forward-facing athletic profile)
       ctx.fillStyle = nearColor;
       ctx.beginPath();
       ctx.ellipse(headCenterX, headCenterY, 4.6, 5.2, -0.2, 0, Math.PI * 2);
       ctx.fill();
 
-      // Sleek visor / nose profile facing left (-X)
+      // Sleek visor facing into the wind (-X)
       ctx.beginPath();
       ctx.moveTo(headCenterX - 3.5, headCenterY - 1.8);
       ctx.lineTo(headCenterX - 7.5, headCenterY - 0.5);
@@ -270,41 +238,34 @@ export default function ShadowRunner() {
       ctx.closePath();
       ctx.fill();
 
-      // Aerodynamic wind-blown hair ribbon fluttering behind to the right (+X)
-      const hairFlutter = Math.sin(elapsed * 16) * 2.2;
+      // Wind-blown hair trailing behind in the storm (+X)
+      const windTurbulence = Math.sin(elapsed * 22) * 3.0;
       ctx.beginPath();
       ctx.moveTo(headCenterX + 3.0, headCenterY - 2.5);
       ctx.quadraticCurveTo(
-        headCenterX + 8.0,
-        headCenterY - 4.5 + hairFlutter * 0.5,
-        headCenterX + 14.5,
-        headCenterY - 2.0 + hairFlutter
+        headCenterX + 9.0,
+        headCenterY - 5.5 + windTurbulence * 0.6,
+        headCenterX + 16.5,
+        headCenterY - 2.2 + windTurbulence
       );
       ctx.quadraticCurveTo(
-        headCenterX + 7.5,
-        headCenterY + 0.5 + hairFlutter * 0.5,
+        headCenterX + 8.5,
+        headCenterY + 0.8 + windTurbulence * 0.5,
         headCenterX + 2.5,
         headCenterY + 1.5
       );
       ctx.closePath();
       ctx.fill();
 
-      // ==========================================
-      // LAYER 5: NEAR LEG (Foreground Obsidian)
-      // ==========================================
-      // Near Thigh
+      // NEAR LEG
       drawMuscleCapsule(hipX, hipY, nearLeg.kneeX, nearLeg.kneeY, 4.8, 3.2, nearColor);
-      // Near Calf & Shin (muscular athletic contour)
       const nearMidCalfX = nearLeg.kneeX + (nearLeg.ankleX - nearLeg.kneeX) * 0.45;
       const nearMidCalfY = nearLeg.kneeY + (nearLeg.ankleY - nearLeg.kneeY) * 0.45;
       drawMuscleCapsule(nearLeg.kneeX, nearLeg.kneeY, nearMidCalfX, nearMidCalfY, 3.2, 4.0, nearColor);
       drawMuscleCapsule(nearMidCalfX, nearMidCalfY, nearLeg.ankleX, nearLeg.ankleY, 4.0, 2.4, nearColor);
-      // Near Running Shoe
       drawRunningShoe(nearLeg.ankleX, nearLeg.ankleY, nearLeg.toeAngle, nearColor);
 
-      // ==========================================
-      // LAYER 6: NEAR ARM (Foreground Obsidian)
-      // ==========================================
+      // NEAR ARM
       drawMuscleCapsule(shoulderX, shoulderY, nearArm.elbowX, nearArm.elbowY, 3.5, 2.6, nearColor);
       drawMuscleCapsule(nearArm.elbowX, nearArm.elbowY, nearArm.fistX, nearArm.fistY, 2.6, 2.1, nearColor);
       ctx.fillStyle = nearColor;
